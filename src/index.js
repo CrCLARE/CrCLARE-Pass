@@ -1,10 +1,13 @@
 // ============================================================
 // Nexus - Main Entry Point
-// SECURITY: Enforces Bootstrap interception and global headers.
+// SECURITY: Implements Bootstrap interception and routing.
 // ============================================================
 
 import { handleSetupAPI } from './routes/setup.js';
-import { error } from './utils/response.js';
+import { getPublicConfig } from './routes/config.js';
+import { handleAuthAPI } from './routes/auth.js';
+import { handleGithubOAuth } from './routes/oauth.js';
+import { error, json } from './utils/response.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,22 +27,35 @@ export default {
       if (!isInitialized) {
         if (path === '/api/setup') return handleSetupAPI(request, env);
         if (path.startsWith('/api/')) return error('ERR_NOT_INIT', 'System not initialized', 403);
-        // Redirect everything else to setup.html (served as static asset)
+        // Force redirect to setup UI
         return Response.redirect(`${url.origin}/setup.html`, 302);
       }
 
-      // 2. Routing (After Initialization)
-      if (path === '/api/setup') return error('ERR_LOCKED', 'System already initialized', 403);
-      if (path === '/api/auth/login') {
-         // return handleLogin(request, env); // Next step
-         return new Response('Login API ready');
+      // 2. System is initialized. Proceed to Routing.
+      if (path === '/api/setup') return error('ERR_ALREADY_INIT', 'System already initialized', 403);
+
+      // Public Config API
+      if (path === '/api/config/public' && request.method === 'GET') {
+        return getPublicConfig(env);
       }
 
-      // Let Cloudflare Workers handle static assets (configured in wrangler.toml)
+      // Auth API (Login, Register, etc.)
+      if (path.startsWith('/api/auth')) {
+        return handleAuthAPI(request, env);
+      }
+
+      // GitHub OAuth Endpoints
+      if (path.startsWith('/api/oauth/github')) {
+        return handleGithubOAuth(request, env);
+      }
+
+      // Serve Static Files (from /public directory)
+      // Assuming Cloudflare Workers Assets is configured to fallback to index.html or similar
       return env.ASSETS.fetch(request);
 
     } catch (e) {
-      return error('ERR_CORE', 'Internal Server Error', 500);
+      console.error('[Core Error]', e);
+      return error('ERR_SYSTEM_ERROR', 'Internal Server Error', 500);
     }
   }
 };
