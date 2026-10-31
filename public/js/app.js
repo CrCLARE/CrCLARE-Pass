@@ -1,60 +1,58 @@
 // ============================================================
 // Nexus - Dynamic Frontend Application Logic
-// SECURITY: Uses textContent strictly for DOM injection.
+// SECURITY: Uses textContent strictly for DOM injection to prevent XSS.
+// Handles dynamic configuration, OAuth rendering, and the two-step login flow.
 // ============================================================
 
-// Supported OAuth providers mapping
+// Supported OAuth providers mapping. 
+// V1.0 primarily uses GitHub, but the structure supports future additions.
 const OAUTH_PROVIDERS = {
   github: {
     name: 'GitHub',
     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>`
-  },
-  google: {
-    name: 'Google',
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>`
-  },
-  qq: {
-    name: 'QQ',
-    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="#60a5fa"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>`
-  },
-  // Add more providers here as needed (microsoft, apple, reddit, discord, facebook)
+  }
+  // Future providers (Google, Microsoft, QQ, etc.) will be added here.
 };
 
-// Global state to store backend config
+// Global state to store backend configuration
 window.NEXUS_CONFIG = window.NEXUS_CONFIG || {};
 
+/**
+ * Initializes the application by fetching dynamic configuration from the backend.
+ * Updates site branding, OAuth buttons, and footer dynamically.
+ */
 export async function initApp() {
   try {
-    // Fetch dynamic configuration from backend
     const res = await fetch('/api/config/public');
     const config = await res.json();
 
-    // Save config globally for other functions to access
+    // Save configuration globally for other functions to access
     window.NEXUS_CONFIG = config;
 
-    // 1. Update Site Name
+    // 1. Update Site Name (Fallback to default HTML if not set)
     const siteNameEl = document.getElementById('site-name');
     if (siteNameEl && config.siteName) {
       siteNameEl.textContent = config.siteName;
       document.title = document.title.replace('Nexus', config.siteName);
     }
 
-    // 2. Update Logo (Supports URL or SVG string)
+    // 2. Update Logo (Supports URL or Base64)
     const logoImg = document.getElementById('dynamic-logo-img');
     const defaultLogo = document.getElementById('default-logo');
     const logoContainer = document.getElementById('site-logo-container');
     
     if (config.siteLogo && logoImg) {
-      // SECURITY: Ensure it's a valid image URL or safe SVG data URI
+      // SECURITY: Ensure it's a valid image URL or safe data URI
       if (config.siteLogo.startsWith('data:image/') || config.siteLogo.startsWith('http')) {
         logoImg.src = config.siteLogo;
         logoImg.classList.remove('hidden');
         if (defaultLogo) defaultLogo.classList.add('hidden');
+        // Remove default background color if custom logo is used
         if (logoContainer) logoContainer.classList.remove('bg-[#93c5fd]');
       }
     }
 
-    // 3. Render OAuth Buttons dynamically
+    // 3. Dynamically Render OAuth Buttons
     const oauthContainer = document.getElementById('oauth-container');
     const oauthSection = document.getElementById('oauth-section');
     
@@ -64,10 +62,10 @@ export async function initApp() {
 
       config.enabledOAuths.forEach(providerKey => {
         const provider = OAUTH_PROVIDERS[providerKey];
-        if (!provider) return;
+        if (!provider) return; // Skip if provider is not supported in frontend mapping
 
         const btn = document.createElement('a');
-        btn.href = `/api/auth/oauth/${providerKey}`;
+        btn.href = `/api/oauth/${providerKey}`;
         btn.className = "w-full btn-outline text-[14px] flex items-center justify-center gap-2 py-2.5";
         
         // SECURITY: Using innerHTML only with our trusted constant string icon
@@ -85,11 +83,44 @@ export async function initApp() {
 
   } catch (e) {
     console.error('[App] Failed to load dynamic config:', e);
+    // Fail-safe: The HTML defaults will remain visible if the API fails.
   }
 }
 
 /**
- * Handles the two-step login flow and dynamic Turnstile rendering.
+ * Dynamically loads the required CAPTCHA SDK based on backend configuration.
+ */
+async function loadCaptchaSDK(provider) {
+  return new Promise((resolve) => {
+    if (provider === 'turnstile') {
+      if (window.turnstile) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.onload = resolve;
+      document.head.appendChild(script);
+    } else if (provider === 'recaptcha') {
+      if (window.grecaptcha) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+      script.async = true;
+      script.onload = resolve;
+      document.head.appendChild(script);
+    } else if (provider === 'geetest') {
+      if (window.initGeetest4) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://static.geetest.com/v4/gt4.js';
+      script.async = true;
+      script.onload = resolve;
+      document.head.appendChild(script);
+    } else {
+      resolve(); // 'none' or unhandled provider
+    }
+  });
+}
+
+/**
+ * Sets up the two-step login flow, view transitions, and form submissions.
  */
 export function setupLoginFlow() {
   const stepEmail = document.getElementById('step-email');
@@ -98,38 +129,53 @@ export function setupLoginFlow() {
   const passwordForm = document.getElementById('passwordForm');
   const backBtn = document.getElementById('backToEmail');
   const displayEmail = document.getElementById('display-email');
-  const turnstileContainer = document.getElementById('turnstile-container');
+  const captchaContainer = document.getElementById('turnstile-container');
   
   let currentEmail = '';
-  let turnstileWidgetId = null;
+  let captchaWidgetId = null;
 
   // Step 1: Proceed to password view
-  emailForm.addEventListener('submit', (e) => {
+  emailForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     currentEmail = document.getElementById('email').value.trim();
-    if(!currentEmail) return;
+    if (!currentEmail) return;
 
+    // Update UI
     displayEmail.textContent = currentEmail;
     stepEmail.classList.add('step-hidden');
     stepPassword.classList.remove('step-hidden');
     
+    // Focus the password input
     setTimeout(() => document.getElementById('password').focus(), 100);
 
-    // SECURITY: Render Turnstile only if enabled by Admin and SiteKey is provided.
+    // Handle CAPTCHA rendering dynamically
     const config = window.NEXUS_CONFIG;
-    if (config.enableTurnstile && config.turnstileSiteKey) {
-      turnstileContainer.classList.remove('hidden');
-      
-      // Render only once
-      if (!turnstileWidgetId && window.turnstile) {
-        turnstileWidgetId = window.turnstile.render('#turnstile-container', {
-          sitekey: config.turnstileSiteKey,
+    if (config.captchaProvider && config.captchaProvider !== 'none' && config.captchaSiteKey) {
+      captchaContainer.classList.remove('hidden');
+      await loadCaptchaSDK(config.captchaProvider);
+
+      // Initialize specific CAPTCHA
+      if (config.captchaProvider === 'turnstile' && window.turnstile && !captchaWidgetId) {
+        captchaWidgetId = window.turnstile.render('#turnstile-container', {
+          sitekey: config.captchaSiteKey,
           theme: 'dark',
+        });
+      } 
+      else if (config.captchaProvider === 'recaptcha' && window.grecaptcha && !captchaWidgetId) {
+        captchaWidgetId = window.grecaptcha.render('turnstile-container', {
+          sitekey: config.captchaSiteKey,
+          theme: 'dark'
+        });
+      }
+      else if (config.captchaProvider === 'geetest' && window.initGeetest4 && !captchaWidgetId) {
+        window.initGeetest4({ captchaId: config.captchaSiteKey, product: "bind" }, function (captcha) {
+          captcha.appendTo("#turnstile-container");
+          window.geetestInstance = captcha;
+          captchaWidgetId = 'geetest_rendered';
         });
       }
     } else {
-      // Hide container if admin disabled it
-      turnstileContainer.classList.add('hidden');
+      captchaContainer.classList.add('hidden');
     }
   });
 
@@ -139,25 +185,38 @@ export function setupLoginFlow() {
     stepEmail.classList.remove('step-hidden');
     document.getElementById('password').value = '';
     
-    // Reset Turnstile if it was rendered
-    if(turnstileWidgetId && window.turnstile) {
-      window.turnstile.reset(turnstileWidgetId);
+    // Reset CAPTCHA if it was rendered
+    const config = window.NEXUS_CONFIG;
+    if (captchaWidgetId) {
+      if (config.captchaProvider === 'turnstile' && window.turnstile) window.turnstile.reset(captchaWidgetId);
+      if (config.captchaProvider === 'recaptcha' && window.grecaptcha) window.grecaptcha.reset(captchaWidgetId);
+      if (config.captchaProvider === 'geetest' && window.geetestInstance) window.geetestInstance.reset();
     }
   });
 
-  // Step 2: Submit password
+  // Step 2: Submit password for authentication
   passwordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const password = document.getElementById('password').value;
     const config = window.NEXUS_CONFIG;
     
-    let turnstileToken = '';
+    let captchaToken = '';
 
-    // SECURITY: Only require Turnstile token if Admin enabled it
-    if (config.enableTurnstile && config.turnstileSiteKey) {
-      turnstileToken = window.turnstile.getResponse(turnstileWidgetId);
-      if (!turnstileToken) {
-        alert("Please complete the human verification."); 
+    // SECURITY: Only extract token if CAPTCHA is required
+    if (config.captchaProvider && config.captchaProvider !== 'none') {
+      if (config.captchaProvider === 'turnstile' && window.turnstile) {
+        captchaToken = window.turnstile.getResponse(captchaWidgetId);
+      } 
+      else if (config.captchaProvider === 'recaptcha' && window.grecaptcha) {
+        captchaToken = window.grecaptcha.getResponse(captchaWidgetId);
+      }
+      else if (config.captchaProvider === 'geetest' && window.geetestInstance) {
+        const result = window.geetestInstance.getValidate();
+        if (result) captchaToken = JSON.stringify(result);
+      }
+
+      if (!captchaToken) {
+        alert("Please complete the human verification."); // TODO: Replace with i18n
         return;
       }
     }
@@ -169,26 +228,29 @@ export function setupLoginFlow() {
         body: JSON.stringify({ 
           email: currentEmail, 
           password: password,
-          turnstile_token: turnstileToken
+          captcha_token: captchaToken
         })
       });
       
       const data = await res.json();
       if (res.ok) {
         // Role-based redirection
-        if (data.user.role === 'admin' || data.user.role === 'super_admin') {
+        if (data.user && (data.user.role === 'admin' || data.user.role === 'super_admin')) {
           window.location.href = '/role-select.html';
         } else {
           window.location.href = '/uc.html';
         }
       } else {
-        alert(data.error.message || 'Login failed');
-        // Reset Turnstile on failure
-        if(turnstileWidgetId && window.turnstile) window.turnstile.reset(turnstileWidgetId); 
+        alert(data.error?.message || 'Login failed'); // TODO: Replace with i18n
+        // Reset CAPTCHA on failure
+        if (captchaWidgetId) {
+          if (config.captchaProvider === 'turnstile' && window.turnstile) window.turnstile.reset(captchaWidgetId);
+          if (config.captchaProvider === 'recaptcha' && window.grecaptcha) window.grecaptcha.reset(captchaWidgetId);
+        }
       }
     } catch (err) {
-      console.error(err);
-      alert('Network error');
+      console.error('[Login Error]', err);
+      alert('Network error, please try again.');
     }
   });
 }
