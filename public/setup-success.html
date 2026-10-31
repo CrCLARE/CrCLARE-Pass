@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Complete - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base dark theme styling */
+    body { background-color: #121212; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; margin: 0; }
+    
+    /* Container for the text content */
+    .content { position: relative; z-index: 10; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; opacity: 0; animation: fadeIn 2s ease-in-out 0.5s forwards; }
+    
+    /* Fade in animation */
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    /* Gradient text for the Congratulations */
+    .text-gradient { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* The party popper icon animation */
+    .popper { transform-origin: bottom left; animation: pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes pop { 0% { transform: scale(0) rotate(-45deg); } 50% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
+    
+    .btn-enter { background-color: #27272a; border: 1px solid #52525b; color: white; transition: all 0.3s; }
+    .btn-enter:hover { background-color: #3f3f46; transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas for the confetti explosion -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none" style="z-index: 0;"></canvas>
+
+  <!-- Main Content -->
+  <div class="content">
+    <!-- Big Party Popper SVG -->
+    <div class="mb-8">
+      <svg class="popper" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.5 5.5l3 9-7.5 7.5 7.5-7.5 9 3z" fill="#fbbf24" stroke="none"/>
+        <path d="M12 4v2m0 12v2M4 12H2m20 0h-2M6 18l1.5-1.5M18 6l-1.5 1.5" stroke="#fbbf24" stroke-width="2"/>
+        <path d="M14 10l4-4m-2 6l4-4m-6 2l4-4" stroke="#f472b6" stroke-width="2"/>
+        <circle cx="16" cy="8" r="1.5" fill="#60a5fa" />
+        <rect x="17" y="12" width="2" height="2" fill="#34d399" transform="rotate(45 18 13)" />
+        <circle cx="12" cy="6" r="1" fill="#f87171" />
+      </svg>
+    </div>
+
+    <!-- Text Content -->
+    <h1 class="text-5xl md:text-6xl font-extrabold mb-6 text-gradient tracking-tight" data-i18n="success.title">
+      Congratulations!
+    </h1>
+    
+    <p class="text-lg md:text-xl text-gray-300 max-w-2xl leading-relaxed mb-10">
+      <span data-i18n="success.desc_prefix">You have completed the initialization of</span> 
+      <span id="dynamic-site-name" class="font-bold text-white">Nexus</span>.<br/>
+      <span data-i18n="success.desc_suffix">Welcome to this Galaxy full of infinite possibilities.</span>
+    </p>
+
+    <!-- Action Button -->
+    <div>
+      <a href="/login.html" class="btn-enter px-8 py-3.5 rounded-xl font-semibold shadow-lg" data-i18n="success.enter_btn">
+        Enter System
+      </a>
+    </div>
+    
+    <!-- Powered By -->
+    <div class="absolute bottom-8 text-[13px] text-gray-500">
+        <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="hover:text-gray-300 transition-colors">Powered by Nexus</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+
+    // Apply dynamic site name if available (fallback to Nexus)
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/config/public');
+        const config = await res.json();
+        if (config.siteName) {
+          document.getElementById('dynamic-site-name').textContent = config.siteName;
+          document.title = `Setup Complete - ${config.siteName}`;
+        }
+        if (config.poweredByText) {
+          document.getElementById('powered-by-text').textContent = config.poweredByText;
+        }
+      } catch (e) {
+        console.warn("Could not load config for success page");
+      }
+    }
+    
+    initI18n().then(loadConfig);
+
+    // ============================================================
+    // Native Canvas Confetti Logic
+    // ============================================================
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let width, height;
+    let particles = [];
+    
+    // Theme colors
+    const colors = ['#60a5fa', '#a78bfa', '#34d399', '#fbbf24', '#f472b6'];
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 25;
+        this.vy = (Math.random() - 0.5) * 25 - 5;
+        this.gravity = 0.35;
+        this.drag = 0.98;
+        this.size = Math.random() * 8 + 6;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+        this.opacity = 1;
+        this.decay = Math.random() * 0.015 + 0.01;
+      }
+
+      update() {
+        this.vx *= this.drag;
+        this.vy *= this.drag;
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.rotationSpeed;
+        this.opacity -= this.decay;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size * 0.6);
+        ctx.restore();
+      }
+    }
+
+    function fireCannons() {
+      const count = 150;
+      const originX1 = width * 0.2;
+      const originY1 = height * 0.8;
+      const originX2 = width * 0.8;
+      const originY2 = height * 0.8;
+      
+      for (let i = 0; i < count; i++) {
+        const angle1 = (Math.random() * Math.PI / 4) - (Math.PI * 3 / 4);
+        const angle2 = (Math.random() * Math.PI / 4) - (Math.PI * 1 / 4);
+        
+        let p1 = new Particle(originX1, originY1);
+        p1.vx = Math.cos(angle1) * (Math.random() * 20 + 10);
+        p1.vy = Math.sin(angle1) * (Math.random() * 20 + 10);
+        particles.push(p1);
+        
+        let p2 = new Particle(originX2, originY2);
+        p2.vx = Math.cos(angle2) * (Math.random() * 20 + 10);
+        p2.vy = Math.sin(angle2) * (Math.random() * 20 + 10);
+        particles.push(p2);
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, width, height);
+      
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw();
+        if (p.opacity <= 0) particles.splice(i, 1);
+      }
+      
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+    setTimeout(fireCannons, 500);
+    setTimeout(fireCannons, 1500);
+  </script>
+</body>
+</html>
