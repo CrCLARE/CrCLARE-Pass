@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base dark theme styling */
+    body { background-color: #121212; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    /* Floating label input group styles */
+    .input-group { position: relative; }
+    .input-group input { width: 100%; background-color: transparent; border: 1px solid #3f3f46; border-radius: 8px; padding: 24px 16px 8px 16px; color: white; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    .input-group input:focus { border-color: #60a5fa; }
+    .input-group label { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #71717a; font-size: 14px; pointer-events: none; transition: 0.2s ease all; }
+    .input-group input:focus ~ label, .input-group input:not(:placeholder-shown) ~ label { top: 14px; font-size: 11px; color: #a1a1aa; }
+    
+    /* Button styles */
+    .btn-primary { background-color: #93c5fd; color: #18181b; border-radius: 8px; font-weight: 600; transition: background-color 0.2s; padding: 12px; width: 100%; }
+    .btn-primary:hover { background-color: #bfdbfe; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* View Transition */
+    .step-view { transition: opacity 0.3s ease; }
+    .step-hidden { display: none !important; opacity: 0; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-[440px] bg-[#202023] p-8 rounded-2xl shadow-2xl relative">
+    
+    <!-- Header: Logo and Language Switcher -->
+    <div class="flex justify-between items-center mb-8">
+      <div class="flex items-center gap-3">
+        <div id="site-logo-container" class="w-10 h-10 rounded-full bg-[#93c5fd] flex items-center justify-center overflow-hidden">
+          <svg id="default-logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <span id="site-name" class="text-[22px] font-bold text-white tracking-wide">Nexus</span>
+      </div>
+      
+      <div id="lang-switcher" class="relative flex items-center">
+        <button id="lang-btn" type="button" class="text-gray-400 hover:text-white transition-colors p-2.5 rounded-lg hover:bg-[#27272a] focus:outline-none flex items-center justify-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-10 4 10"/><path d="M4.5 13h5"/><path d="M14 11a3 3 0 100 6 3 3 0 100-6z"/><path d="M17 11v6"/><path d="M14 14h3"/></svg>
+        </button>
+        <div id="lang-dropdown" class="hidden absolute right-0 top-full mt-2 w-44 bg-[#2a2a2c] border border-[#3f3f46] rounded-xl shadow-2xl py-2 z-50 max-h-[300px] overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Bootstrap Password -->
+    <div id="step-1" class="step-view">
+      <h1 class="text-[24px] font-bold text-white mb-2" data-i18n="setup.title">Welcome to Nexus</h1>
+      <p class="text-[14px] text-gray-400 mb-8" data-i18n="setup.step1_desc">Please enter the bootstrap password configured in your environment variables to begin initialization.</p>
+
+      <form id="form-step-1" class="space-y-4">
+        <div class="input-group">
+          <input type="password" id="bootstrap-password" placeholder=" " required>
+          <label for="bootstrap-password" data-i18n="setup.bootstrap_pwd">Bootstrap Password</label>
+        </div>
+        <p id="error-step-1" class="text-red-400 text-sm mt-2 hidden"></p>
+        <button type="submit" class="btn-primary mt-4 text-[15px] font-semibold" data-i18n="setup.verify_btn">Verify Password</button>
+      </form>
+    </div>
+
+    <!-- STEP 2: Create Super Admin -->
+    <div id="step-2" class="step-view step-hidden">
+      <h1 class="text-[24px] font-bold text-white mb-2" data-i18n="setup.admin_title">Create Super Admin</h1>
+      <p class="text-[14px] text-gray-400 mb-8" data-i18n="setup.step2_desc">Bootstrap verified. Please create your primary administrator account.</p>
+
+      <form id="form-step-2" class="space-y-4">
+        <div class="input-group">
+          <input type="email" id="admin-email" placeholder=" " required>
+          <label for="admin-email" data-i18n="setup.admin_email">Admin Email</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="admin-password" placeholder=" " required minlength="8">
+          <label for="admin-password" data-i18n="setup.admin_pwd">Admin Password (Min 8 chars)</label>
+        </div>
+        <p id="error-step-2" class="text-red-400 text-sm mt-2 hidden"></p>
+        <button type="submit" class="btn-primary mt-4 text-[15px] font-semibold" data-i18n="setup.finish_btn">Complete Setup</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+
+    // Global state for the setup token
+    let setupToken = null;
+
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const form1 = document.getElementById('form-step-1');
+    const form2 = document.getElementById('form-step-2');
+    const error1 = document.getElementById('error-step-1');
+    const error2 = document.getElementById('error-step-2');
+
+    async function init() {
+      await initI18n();
+    }
+
+    // Handle Step 1: Verify Bootstrap Password
+    form1.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error1.classList.add('hidden');
+      const btn = form1.querySelector('button');
+      btn.disabled = true;
+
+      const password = document.getElementById('bootstrap-password').value;
+
+      try {
+        // Request temporary setup token
+        const res = await fetch('/api/setup?step=verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bootstrap_password: password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.setup_token) {
+          setupToken = data.setup_token;
+          // Transition to Step 2
+          step1.classList.add('step-hidden');
+          step2.classList.remove('step-hidden');
+        } else {
+          error1.textContent = data.error?.message || 'Invalid bootstrap password.';
+          error1.classList.remove('hidden');
+        }
+      } catch (err) {
+        error1.textContent = 'Network error. Please try again.';
+        error1.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Handle Step 2: Create Admin
+    form2.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      error2.classList.add('hidden');
+      const btn = form2.querySelector('button');
+      btn.disabled = true;
+
+      const email = document.getElementById('admin-email').value;
+      const password = document.getElementById('admin-password').value;
+
+      try {
+        // SECURITY: Pass the temporary setup token in the Authorization header
+        const res = await fetch('/api/setup?step=init', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${setupToken}`
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Success! Redirect to the confetti page
+          window.location.href = '/setup-success.html';
+        } else {
+          error2.textContent = data.error?.message || 'Initialization failed.';
+          error2.classList.remove('hidden');
+        }
+      } catch (err) {
+        error2.textContent = 'Network error. Please try again.';
+        error2.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
