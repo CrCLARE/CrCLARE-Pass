@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Cloudflare Turnstile script asynchronously -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  <style>
+    /* Base dark theme styling */
+    body { background-color: #18181b; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    /* Floating label input group styles */
+    .input-group { position: relative; }
+    .input-group input { width: 100%; background-color: transparent; border: 1px solid #3f3f46; border-radius: 8px; padding: 24px 16px 8px 44px; color: white; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    .input-group input:focus { border-color: #60a5fa; }
+    .input-group label { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); color: #71717a; font-size: 14px; pointer-events: none; transition: 0.2s ease all; }
+    .input-group input:focus ~ label, .input-group input:not(:placeholder-shown) ~ label { top: 14px; font-size: 11px; color: #a1a1aa; }
+    .input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #71717a; }
+    
+    /* Button styles */
+    .btn-primary { background-color: #93c5fd; color: #18181b; border-radius: 8px; font-weight: 600; transition: background-color 0.2s; padding: 12px; }
+    .btn-primary:hover { background-color: #bfdbfe; }
+    .btn-outline { background-color: transparent; border: 1px solid #3f3f46; border-radius: 8px; color: #e4e4e7; padding: 12px; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+    .btn-outline:hover { background-color: #27272a; }
+    
+    /* View transition utility classes */
+    .step-view { transition: opacity 0.3s ease; }
+    .step-hidden { display: none !important; opacity: 0; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-[440px] bg-[#202023] p-8 rounded-2xl shadow-2xl relative">
+    
+    <!-- Header: Logo and Language Switcher -->
+    <div class="flex justify-between items-center mb-8">
+      <div class="flex items-center gap-3">
+        <div id="site-logo-container" class="w-10 h-10 rounded-full bg-[#93c5fd] flex items-center justify-center overflow-hidden">
+          <svg id="default-logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <img id="dynamic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+        </div>
+        <span id="site-name" class="text-[22px] font-bold text-white tracking-wide">Nexus</span>
+      </div>
+      
+      <div id="lang-switcher" class="relative flex items-center">
+        <button id="lang-btn" type="button" class="text-gray-400 hover:text-white transition-colors p-2.5 rounded-lg hover:bg-[#27272a] focus:outline-none flex items-center justify-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l4-10 4 10"/><path d="M4.5 13h5"/><path d="M14 11a3 3 0 100 6 3 3 0 100-6z"/><path d="M17 11v6"/><path d="M14 14h3"/></svg>
+        </button>
+        <div id="lang-dropdown" class="hidden absolute right-0 top-full mt-2 w-44 bg-[#2a2a2c] border border-[#3f3f46] rounded-xl shadow-2xl py-2 z-50 max-h-[300px] overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Email Input & OAuth -->
+    <div id="step-email" class="step-view">
+      <h1 class="text-[26px] font-bold text-white mb-8" data-i18n="login.title">Sign in to Nexus</h1>
+
+      <form id="emailForm" class="space-y-4">
+        <div class="input-group">
+          <span class="input-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg></span>
+          <input type="email" id="email" placeholder=" " required>
+          <label for="email" data-i18n="login.email">Email address</label>
+        </div>
+        <button type="submit" class="w-full btn-primary mt-2 text-[15px] font-semibold" data-i18n="login.next">Next</button>
+      </form>
+
+      <div class="text-center mt-5 text-[14px] text-gray-400">
+        <span data-i18n="login.no_account">Don't have an account?</span>
+        <a href="/register.html" class="text-gray-200 hover:text-white hover:underline ml-1" data-i18n="login.register">Sign up</a>
+      </div>
+
+      <!-- Dynamic OAuth Section (Injected by JS based on backend config) -->
+      <div id="oauth-section" class="hidden">
+        <div class="relative flex items-center py-6">
+          <div class="flex-grow border-t border-[#3f3f46]"></div>
+          <span class="flex-shrink-0 mx-4 text-gray-500 text-[13px]" data-i18n="login.or">Or continue with</span>
+          <div class="flex-grow border-t border-[#3f3f46]"></div>
+        </div>
+        <div id="oauth-container" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Password Input & Turnstile -->
+    <div id="step-password" class="step-view step-hidden">
+      <h1 class="text-[26px] font-bold text-white mb-2" data-i18n="login.password_title">Enter Password</h1>
+      <p class="text-[14px] text-gray-400 mb-6">
+        <span data-i18n="login.password_hint">Enter the password for</span> 
+        <span id="display-email" class="text-gray-200 font-medium"></span>
+      </p>
+
+      <form id="passwordForm" class="space-y-4">
+        <div class="input-group">
+          <span class="input-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <input type="password" id="password" placeholder=" " required>
+          <label for="password" data-i18n="login.password">Password</label>
+        </div>
+
+        <div class="text-left mt-2">
+          <a href="/forgot-password.html" class="text-[13px] text-blue-400 hover:text-blue-300" data-i18n="login.forgot">Forgot password?</a>
+        </div>
+
+        <!-- Turnstile Container (Hidden by default, shown via JS if enabled by admin) -->
+        <div id="turnstile-container" class="my-4 flex justify-center hidden"></div>
+
+        <button type="submit" class="w-full btn-primary mt-4 text-[15px] font-semibold" data-i18n="login.login_btn">Sign In</button>
+      </form>
+
+      <div class="mt-6 text-left">
+        <button id="backToEmail" class="inline-flex items-center gap-1 text-[14px] text-gray-400 hover:text-white transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span data-i18n="login.back">Back</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer Links -->
+    <div class="mt-8 text-center text-[13px] text-gray-400 flex flex-col gap-3">
+      <div class="flex justify-center gap-3">
+        <a href="/terms" class="hover:text-gray-200" data-i18n="login.terms">Terms of Service</a>
+        <span>|</span>
+        <a href="/privacy" class="hover:text-gray-200" data-i18n="login.privacy">Privacy Policy</a>
+      </div>
+      <div>
+        <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline font-medium">Powered by Nexus</a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Initialization Scripts -->
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+    import { initApp, setupLoginFlow } from '/js/app.js';
+    
+    // Initialize i18n, then fetch dynamic config, then setup login events
+    initI18n().then(() => {
+      initApp().then(() => {
+        setupLoginFlow();
+      });
+    });
+  </script>
+</body>
+</html>
