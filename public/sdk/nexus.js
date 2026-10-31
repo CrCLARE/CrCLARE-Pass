@@ -1,7 +1,7 @@
 // ============================================================
-// Nexus SDK (v1.0) - One-line SSO for Indie Blogs & Twikoo
-// SECURITY: Uses window.postMessage with strict Origin validation
-// to prevent token interception by malicious third-party sites.
+// Nexus SDK (v1.2) - One-line SSO for Indie Blogs & Twikoo
+// SECURITY: Uses window.postMessage with strict Origin validation 
+// and CSRF state checking. Dynamically infers base URL.
 // ============================================================
 
 (function (global) {
@@ -9,17 +9,16 @@
 
   // Default configuration
   let config = {
-    nexusUrl: 'https://pass.crclare.top', // Default Nexus Auth Server
+    nexusUrl: '', // SECURITY/DYNAMIC: Will be inferred from script src or data attribute
     clientId: '',
-    redirectUri: window.location.origin // Defaults to the current site
+    redirectUri: window.location.origin
   };
 
-  // Internal state
   let authWindow = null;
   let currentToken = null;
   let currentUser = null;
+  let currentState = null;
 
-  // Load token from localStorage on init
   try {
     const savedAuth = localStorage.getItem('nexus_sdk_auth');
     if (savedAuth) {
@@ -32,33 +31,52 @@
   }
 
   /**
-   * Initializes the SDK configuration from the <script> tag data attributes.
+   * Initializes the SDK configuration from the script tag.
+   * DYNAMIC: Automatically extracts the origin from the script src if not explicitly provided.
    */
   function init() {
-    const scriptTag = document.currentScript || document.querySelector('script[src*="nexus.js"]');
+    const scriptTag = document.currentScript || document.querySelector('script[src*="sdk/nexus.js"]') || document.querySelector('script[src*="sdk/index.js"]');
+    
     if (scriptTag) {
-      if (scriptTag.dataset.nexusUrl) config.nexusUrl = scriptTag.dataset.nexusUrl;
+      // 1. Try to get explicitly set URL from data attribute
+      if (scriptTag.dataset.nexusUrl) {
+        config.nexusUrl = scriptTag.dataset.nexusUrl;
+      } 
+      // 2. Fallback: Automatically extract Origin from the SDK's own URL
+      else if (scriptTag.src) {
+        try {
+          const url = new URL(scriptTag.src);
+          config.nexusUrl = url.origin;
+        } catch (e) {
+          console.error('[NexusSDK] Failed to parse script src URL.');
+        }
+      }
+
+      // 3. Get Client ID and Redirect URI
       if (scriptTag.dataset.clientId) config.clientId = scriptTag.dataset.clientId;
       if (scriptTag.dataset.redirectUri) config.redirectUri = scriptTag.dataset.redirectUri;
+    }
+
+    // Validation
+    if (!config.nexusUrl) {
+      console.error('[NexusSDK] Cannot determine Nexus URL. Please provide data-nexus-url attribute or ensure script src is an absolute URL.');
     }
     if (!config.clientId) {
       console.error('[NexusSDK] Missing data-client-id attribute on the script tag.');
     }
   }
 
-  /**
-   * Opens the Nexus login popup window.
-   */
   function login() {
-    if (!config.clientId) return;
+    if (!config.clientId || !config.nexusUrl) return;
 
-    // Build the authorization URL
+    currentState = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+
     const authUrl = new URL(`${config.nexusUrl}/oauth-consent.html`);
     authUrl.searchParams.set('client_id', config.clientId);
     authUrl.searchParams.set('redirect_uri', config.redirectUri);
+    authUrl.searchParams.set('state', currentState);
     
-    // Open a centered popup window
-    const width = 500, height = 600;
+    const width = 500, height = 650;
     const left = (window.screen.width / 2) - (width / 2);
     const top = (window.screen.height / 2) - (height / 2);
     
@@ -68,27 +86,29 @@
       `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
     );
 
-    if (!authWindow) {
-      alert('Popup blocked! Please allow popups for this site to log in.');
-    }
+    if (!authWindow) alert('Popup blocked! Please allow popups.');
   }
 
-  /**
-   * Listens for the postMessage response from the Nexus auth window.
-   */
   window.addEventListener('message', (event) => {
-    // SECURITY: Strict Origin Validation. 
-    // We only accept messages from the Nexus URL we explicitly configured.
-    if (event.origin !== new URL(config.nexusUrl).origin) {
+    // SECURITY: Ensure we are only accepting messages from the dynamically inferred Nexus URL
+    if (!config.nexusUrl) return;
+    
+    try {
+      if (event.origin !== new URL(config.nexusUrl).origin) return;
+    } catch (e) {
       return;
     }
 
     const data = event.data;
     
     if (data && data.type === 'NEXUS_AUTH_SUCCESS') {
+      if (data.state !== currentState) {
+        console.error('[NexusSDK] State mismatch. Possible CSRF attack.');
+        return;
+      }
+
       if (authWindow) authWindow.close();
       
-      // Store the token and user info securely
       currentToken = data.token;
       currentUser = data.user;
       
@@ -101,29 +121,13 @@
         console.warn('[NexusSDK] Could not save session to localStorage.');
       }
 
-      // Dispatch a custom event so the host site (e.g., blog) can react
       document.dispatchEvent(new CustomEvent('nexus:login', { detail: currentUser }));
     }
   });
 
-  /**
-   * Gets the currently logged-in user info.
-   * @returns {Object|null} { id, nickname, email, avatar, isVerified }
-   */
-  function getUser() {
-    return currentUser;
-  }
+  function getUser() { return currentUser; }
+  function getToken() { return currentToken; }
 
-  /**
-   * Gets the raw JWT token for backend API calls (e.g., posting a Twikoo comment).
-   */
-  function getToken() {
-    return currentToken;
-  }
-
-  /**
-   * Logs the user out and clears the local session.
-   */
   function logout() {
     currentToken = null;
     currentUser = null;
@@ -131,10 +135,8 @@
     document.dispatchEvent(new CustomEvent('nexus:logout'));
   }
 
-  // Initialization
   init();
 
-  // Expose the public API to the global window object
   global.NexusSDK = {
     login,
     logout,
