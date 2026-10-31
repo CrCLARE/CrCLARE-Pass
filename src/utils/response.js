@@ -1,24 +1,23 @@
 // ============================================================
 // Nexus - Standard Response Helpers
-// SECURITY: Every response MUST go through these helpers to 
-// ensure strict security headers are always applied.
 // ============================================================
 
-const BASE_HEADERS = {
-  'Content-Type': 'application/json; charset=utf-8',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-};
+import { SECURITY_HEADERS } from '../config/constants.js';
 
+/**
+ * Returns a standardized JSON response with security headers.
+ */
 export function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...BASE_HEADERS, ...extraHeaders }
+    headers: { ...SECURITY_HEADERS, ...extraHeaders }
   });
 }
 
-export function error(code, message, status = 400, extraHeaders = {}) {
-  return json({ code, message }, status, extraHeaders);
+/**
+ * Returns a standardized error response.
+ * SECURITY: Never leak stack traces. Use error codes for i18n.
+ */
+export function error(code, message = 'An error occurred', status = 400, extraHeaders = {}) {
+  return json({ error: { code, message } }, status, extraHeaders);
 }
