@@ -20,11 +20,17 @@ const OAUTH_PROVIDERS = {
   // Add more providers here as needed (microsoft, apple, reddit, discord, facebook)
 };
 
+// Global state to store backend config
+window.NEXUS_CONFIG = window.NEXUS_CONFIG || {};
+
 export async function initApp() {
   try {
     // Fetch dynamic configuration from backend
     const res = await fetch('/api/config/public');
     const config = await res.json();
+
+    // Save config globally for other functions to access
+    window.NEXUS_CONFIG = config;
 
     // 1. Update Site Name
     const siteNameEl = document.getElementById('site-name');
@@ -44,7 +50,6 @@ export async function initApp() {
         logoImg.src = config.siteLogo;
         logoImg.classList.remove('hidden');
         if (defaultLogo) defaultLogo.classList.add('hidden');
-        // Remove background color if custom logo is used
         if (logoContainer) logoContainer.classList.remove('bg-[#93c5fd]');
       }
     }
@@ -62,7 +67,6 @@ export async function initApp() {
         if (!provider) return;
 
         const btn = document.createElement('a');
-        // SECURITY: Link to backend OAuth initiate route
         btn.href = `/api/auth/oauth/${providerKey}`;
         btn.className = "w-full btn-outline text-[14px] flex items-center justify-center gap-2 py-2.5";
         
@@ -82,4 +86,109 @@ export async function initApp() {
   } catch (e) {
     console.error('[App] Failed to load dynamic config:', e);
   }
+}
+
+/**
+ * Handles the two-step login flow and dynamic Turnstile rendering.
+ */
+export function setupLoginFlow() {
+  const stepEmail = document.getElementById('step-email');
+  const stepPassword = document.getElementById('step-password');
+  const emailForm = document.getElementById('emailForm');
+  const passwordForm = document.getElementById('passwordForm');
+  const backBtn = document.getElementById('backToEmail');
+  const displayEmail = document.getElementById('display-email');
+  const turnstileContainer = document.getElementById('turnstile-container');
+  
+  let currentEmail = '';
+  let turnstileWidgetId = null;
+
+  // Step 1: Proceed to password view
+  emailForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    currentEmail = document.getElementById('email').value.trim();
+    if(!currentEmail) return;
+
+    displayEmail.textContent = currentEmail;
+    stepEmail.classList.add('step-hidden');
+    stepPassword.classList.remove('step-hidden');
+    
+    setTimeout(() => document.getElementById('password').focus(), 100);
+
+    // SECURITY: Render Turnstile only if enabled by Admin and SiteKey is provided.
+    const config = window.NEXUS_CONFIG;
+    if (config.enableTurnstile && config.turnstileSiteKey) {
+      turnstileContainer.classList.remove('hidden');
+      
+      // Render only once
+      if (!turnstileWidgetId && window.turnstile) {
+        turnstileWidgetId = window.turnstile.render('#turnstile-container', {
+          sitekey: config.turnstileSiteKey,
+          theme: 'dark',
+        });
+      }
+    } else {
+      // Hide container if admin disabled it
+      turnstileContainer.classList.add('hidden');
+    }
+  });
+
+  // Back button logic
+  backBtn.addEventListener('click', () => {
+    stepPassword.classList.add('step-hidden');
+    stepEmail.classList.remove('step-hidden');
+    document.getElementById('password').value = '';
+    
+    // Reset Turnstile if it was rendered
+    if(turnstileWidgetId && window.turnstile) {
+      window.turnstile.reset(turnstileWidgetId);
+    }
+  });
+
+  // Step 2: Submit password
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('password').value;
+    const config = window.NEXUS_CONFIG;
+    
+    let turnstileToken = '';
+
+    // SECURITY: Only require Turnstile token if Admin enabled it
+    if (config.enableTurnstile && config.turnstileSiteKey) {
+      turnstileToken = window.turnstile.getResponse(turnstileWidgetId);
+      if (!turnstileToken) {
+        alert("Please complete the human verification."); 
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: currentEmail, 
+          password: password,
+          turnstile_token: turnstileToken
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        // Role-based redirection
+        if (data.user.role === 'admin' || data.user.role === 'super_admin') {
+          window.location.href = '/role-select.html';
+        } else {
+          window.location.href = '/uc.html';
+        }
+      } else {
+        alert(data.error.message || 'Login failed');
+        // Reset Turnstile on failure
+        if(turnstileWidgetId && window.turnstile) window.turnstile.reset(turnstileWidgetId); 
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
+  });
 }
