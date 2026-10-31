@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base dark theme styling */
+    body { background-color: #0f0f11; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    
+    /* Sidebar navigation styles */
+    .nav-item { transition: all 0.2s; cursor: pointer; border-left: 3px solid transparent; }
+    .nav-item:hover { background-color: #1e1e21; }
+    .nav-item.active { background-color: #27272a; color: #93c5fd; border-left-color: #93c5fd; }
+    
+    /* Tab content display logic */
+    .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Panel and Form Styles */
+    .glass-panel { background: #18181b; border: 1px solid #27272a; border-radius: 12px; }
+    .form-input { width: 100%; background-color: #121212; border: 1px solid #3f3f46; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #60a5fa; }
+    .form-label { display: block; font-size: 13px; font-weight: 500; color: #a1a1aa; margin-bottom: 6px; }
+    .btn-primary { background-color: #3b82f6; color: #fff; border-radius: 8px; font-weight: 600; padding: 8px 16px; font-size: 14px; transition: background-color 0.2s; }
+    .btn-primary:hover { background-color: #2563eb; }
+    
+    /* Toggle Switch */
+    .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
+    .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+    
+    /* Table Styles */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #27272a; font-size: 14px; }
+    th { background-color: #1e1e21; color: #a1a1aa; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+  <!-- Sidebar Navigation -->
+  <aside class="w-full md:w-64 bg-[#18181b] border-r border-[#27272a] flex-col hidden md:flex h-screen sticky top-0">
+    <!-- Brand Header -->
+    <div class="p-6 flex items-center gap-3 border-b border-[#27272a]">
+      <div id="site-logo-container" class="w-8 h-8 rounded-lg bg-[#93c5fd] flex items-center justify-center overflow-hidden">
+        <svg id="default-logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <img id="dynamic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+      </div>
+      <div>
+        <span id="site-name" class="text-[16px] font-bold text-white tracking-wide block leading-none">Nexus</span>
+        <span class="text-[10px] text-gray-500 font-mono mt-1 block">ADMIN CONSOLE</span>
+      </div>
+    </div>
+    
+    <!-- Navigation Menu -->
+    <nav class="flex-1 py-4 overflow-y-auto">
+      <div class="nav-item active flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-300" data-target="tab-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-site">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Site Settings
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-auth">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Auth & Security
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-oauth">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3"/></svg>
+        OAuth Providers
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-apps">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        Applications
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-users">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        User Management
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-privacy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Privacy & Compliance
+      </div>
+      <div class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-gray-400" data-target="tab-logs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Audit Logs
+      </div>
+    </nav>
+
+    <!-- Footer Action -->
+    <div class="p-4 border-t border-[#27272a]">
+      <button id="logoutBtn" class="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-400 hover:text-white hover:bg-[#27272a] rounded-lg transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Exit to UC
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-6 md:p-10 overflow-y-auto h-screen">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <!-- Top Header -->
+      <div class="flex justify-between items-center mb-8 border-b border-[#27272a] pb-4">
+        <h1 class="text-2xl font-bold text-white" id="page-title">Dashboard Overview</h1>
+        <div class="flex items-center gap-4">
+          <div id="lang-switcher" class="relative flex items-center"></div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold text-white">A</div>
+            <span class="text-sm font-medium text-gray-300">Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TAB 1: Dashboard Overview                  -->
+      <!-- ========================================== -->
+      <section id="tab-dashboard" class="tab-content active">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="glass-panel p-6">
+            <p class="text-sm text-gray-400 mb-1">Total Users</p>
+            <p class="text-3xl font-bold text-white" id="stat-users">--</p>
+          </div>
+          <div class="glass-panel p-6">
+            <p class="text-sm text-gray-400 mb-1">Active OAuth Bindings</p>
+            <p class="text-3xl font-bold text-white" id="stat-oauth">--</p>
+          </div>
+          <div class="glass-panel p-6">
+            <p class="text-sm text-gray-400 mb-1">Registered Applications</p>
+            <p class="text-3xl font-bold text-white" id="stat-apps">--</p>
+          </div>
+        </div>
+        <div class="glass-panel p-6 mt-6">
+          <h3 class="text-lg font-semibold text-white mb-4">System Status</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between border-b border-[#27272a] pb-2">
+              <span class="text-gray-400">Nexus Version</span>
+              <span class="font-mono text-blue-400">v1.0.0</span>
+            </div>
+            <div class="flex justify-between border-b border-[#27272a] pb-2">
+              <span class="text-gray-400">Database (D1)</span>
+              <span class="text-emerald-400">Connected</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">KV Namespace</span>
+              <span class="text-emerald-400">Connected</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: Site Settings                       -->
+      <!-- ========================================== -->
+      <section id="tab-site" class="tab-content space-y-6">
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">Branding</h2>
+          <div class="space-y-4">
+            <div>
+              <label class="form-label">Site Name</label>
+              <input type="text" id="setting-site-name" class="form-input" placeholder="e.g. Nexus SSO">
+            </div>
+            <div>
+              <label class="form-label">Logo URL (Leave blank for default Nexus logo)</label>
+              <input type="url" id="setting-site-logo" class="form-input" placeholder="https://example.com/logo.png">
+            </div>
+            <div>
+              <label class="form-label">Powered By Text</label>
+              <input type="text" id="setting-powered-by" class="form-input" placeholder="Powered by Nexus">
+            </div>
+            <button class="btn-primary mt-2">Save Branding</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: Auth & Security                     -->
+      <!-- ========================================== -->
+      <section id="tab-auth" class="tab-content space-y-6">
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">General Policies</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-white">Require Email Verification</p>
+                <p class="text-xs text-gray-500">Users must verify their email before logging in.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="setting-req-email" class="sr-only toggle-checkbox">
+                <div class="w-11 h-6 bg-gray-700 rounded-full toggle-label transition-colors"></div>
+                <div class="toggle-checkbox absolute w-5 h-5 bg-white rounded-full border-4 border-transparent transition-all transform translate-x-0.5"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+              <div>
+                <p class="text-sm font-medium text-white">Allow User Data Export</p>
+                <p class="text-xs text-gray-500">Allow users to download their data from UC (GDPR).</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="setting-allow-export" class="sr-only toggle-checkbox">
+                <div class="w-11 h-6 bg-gray-700 rounded-full toggle-label transition-colors"></div>
+                <div class="toggle-checkbox absolute w-5 h-5 bg-white rounded-full border-4 border-transparent transition-all transform translate-x-0.5"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">Password & Security</h2>
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="form-label">Min Password Length</label>
+                <input type="number" id="setting-pwd-length" class="form-input" value="8">
+              </div>
+              <div>
+                <label class="form-label">Complexity Requirements</label>
+                <select id="setting-pwd-complexity" class="form-input">
+                  <option value="basic">Basic (Letters & Numbers)</option>
+                  <option value="strong">Strong (Require Special Characters)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">CAPTCHA Provider</label>
+              <select id="setting-captcha" class="form-input">
+                <option value="none">None</option>
+                <option value="turnstile">Cloudflare Turnstile</option>
+                <option value="geetest">Geetest</option>
+                <option value="recaptcha">Google reCAPTCHA</option>
+              </select>
+            </div>
+            <button class="btn-primary mt-2">Save Auth Settings</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: OAuth Providers                     -->
+      <!-- ========================================== -->
+      <section id="tab-oauth" class="tab-content space-y-6">
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">GitHub OAuth</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-medium text-white">Enable GitHub Login</p>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="setting-github-enable" class="sr-only toggle-checkbox">
+                <div class="w-11 h-6 bg-gray-700 rounded-full toggle-label transition-colors"></div>
+                <div class="toggle-checkbox absolute w-5 h-5 bg-white rounded-full border-4 border-transparent transition-all transform translate-x-0.5"></div>
+              </label>
+            </div>
+            <div>
+              <label class="form-label">Client ID</label>
+              <input type="text" id="setting-github-id" class="form-input" placeholder="Iv1.xxxxxx">
+            </div>
+            <div>
+              <label class="form-label">Client Secret</label>
+              <input type="password" id="setting-github-secret" class="form-input" placeholder="••••••••••••••••">
+            </div>
+            <button class="btn-primary mt-2">Save GitHub Settings</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: Applications                        -->
+      <!-- ========================================== -->
+      <section id="tab-apps" class="tab-content">
+        <div class="glass-panel overflow-hidden">
+          <div class="p-4 border-b border-[#27272a] flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-white">Registered Apps (SSO Clients)</h2>
+            <button class="btn-primary">Add New App</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>App Name</th>
+                <th>Client ID</th>
+                <th>Callback URL</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-medium text-white">Twikoo Comments</td>
+                <td class="font-mono text-gray-400">app_7f8a9b2c</td>
+                <td class="font-mono text-gray-400">https://blog.example.com/twikoo</td>
+                <td><button class="text-red-400 hover:text-red-300 text-sm">Delete</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 6: User Management                     -->
+      <!-- ========================================== -->
+      <section id="tab-users" class="tab-content">
+        <div class="glass-panel overflow-hidden">
+          <div class="p-4 border-b border-[#27272a]">
+            <input type="text" class="form-input max-w-sm" placeholder="Search by email or Nexus ID...">
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nexus ID</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-mono text-gray-400">NX-XXXXXX</td>
+                <td class="text-white">user@example.com</td>
+                <td class="text-gray-400">User</td>
+                <td><span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded border border-emerald-500/20">Active</span></td>
+                <td><button class="text-red-400 hover:text-red-300 text-sm">Ban</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 7: Privacy & Compliance                -->
+      <!-- ========================================== -->
+      <section id="tab-privacy" class="tab-content space-y-6">
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">Cookies & GDPR</h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-white">Enable Cookie Consent Banner</p>
+                <p class="text-xs text-gray-500">Shows a GDPR-compliant banner on the frontend.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="setting-cookie-banner" class="sr-only toggle-checkbox">
+                <div class="w-11 h-6 bg-gray-700 rounded-full toggle-label transition-colors"></div>
+                <div class="toggle-checkbox absolute w-5 h-5 bg-white rounded-full border-4 border-transparent transition-all transform translate-x-0.5"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass-panel p-6">
+          <h2 class="text-lg font-semibold text-white mb-6 border-b border-[#27272a] pb-2">Legal Documents</h2>
+          <div class="space-y-4">
+             <div>
+               <label class="form-label">Terms of Service (Markdown Supported)</label>
+               <textarea id="setting-tos" class="form-input h-32 font-mono text-sm" placeholder="# Terms of Service..."></textarea>
+             </div>
+             <button class="btn-primary mt-2">Save Documents</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 8: Audit Logs                          -->
+      <!-- ========================================== -->
+      <section id="tab-logs" class="tab-content">
+        <div class="glass-panel overflow-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-gray-400 whitespace-nowrap">Just now</td>
+                <td class="text-white">admin@example.com</td>
+                <td class="text-blue-400">settings.update</td>
+                <td class="text-gray-400">Updated GitHub OAuth settings</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer (Fixed at bottom of main content) -->
+  <div class="fixed bottom-0 right-0 p-4 text-xs text-gray-600 pointer-events-none">
+    <span class="pointer-events-auto">
+      <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="hover:text-gray-400">Powered by Nexus</a>
+    </span>
+  </div>
+
+  <!-- Admin Page Logic -->
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+    import { initApp } from '/js/app.js';
+
+    /**
+     * Fetches all admin configuration from the backend.
+     * Placeholder implementation.
+     */
+    async function fetchAdminConfig() {
+      // TODO: Replace with actual API fetch
+      // const res = await fetch('/api/admin/config');
+      // return await res.json();
+      
+      return {
+        stats: { users: 142, oauth: 89, apps: 3 },
+        siteName: 'Nexus',
+        siteLogo: '',
+        poweredBy: 'Powered by Nexus',
+        requireEmail: true,
+        allowExport: true,
+        pwdLength: 8,
+        pwdComplexity: 'strong',
+        captcha: 'turnstile',
+        githubEnable: true,
+        githubId: 'Iv1.1234567890',
+        githubSecret: '••••••••••••••••',
+        cookieBanner: true
+      };
+    }
+
+    async function setupAdmin() {
+      // 1. Initialize dynamic config and i18n
+      await initI18n();
+      await initApp();
+
+      // 2. Setup Navigation Tabs
+      const navItems = document.querySelectorAll('.nav-item');
+      const tabs = document.querySelectorAll('.tab-content');
+      const pageTitle = document.getElementById('page-title');
+
+      navItems.forEach(item => {
+        item.addEventListener('click', () => {
+          // Update sidebar active state
+          navItems.forEach(nav => {
+            nav.classList.remove('active', 'text-gray-300');
+            nav.classList.add('text-gray-400');
+          });
+          item.classList.add('active', 'text-gray-300');
+          item.classList.remove('text-gray-400');
+
+          // Switch Tab Content
+          tabs.forEach(tab => tab.classList.remove('active'));
+          const targetId = item.dataset.target;
+          document.getElementById(targetId).classList.add('active');
+
+          // Update Page Title
+          pageTitle.textContent = item.textContent.trim();
+        });
+      });
+
+      // 3. Load and Populate Data
+      const config = await fetchAdminConfig();
+
+      // Stats
+      document.getElementById('stat-users').textContent = config.stats.users;
+      document.getElementById('stat-oauth').textContent = config.stats.oauth;
+      document.getElementById('stat-apps').textContent = config.stats.apps;
+
+      // Site Settings
+      document.getElementById('setting-site-name').value = config.siteName;
+      document.getElementById('setting-site-logo').value = config.siteLogo;
+      document.getElementById('setting-powered-by').value = config.poweredBy;
+
+      // Auth & Security
+      document.getElementById('setting-req-email').checked = config.requireEmail;
+      document.getElementById('setting-allow-export').checked = config.allowExport;
+      document.getElementById('setting-pwd-length').value = config.pwdLength;
+      document.getElementById('setting-pwd-complexity').value = config.pwdComplexity;
+      document.getElementById('setting-captcha').value = config.captcha;
+
+      // OAuth
+      document.getElementById('setting-github-enable').checked = config.githubEnable;
+      document.getElementById('setting-github-id').value = config.githubId;
+      document.getElementById('setting-github-secret').value = config.githubSecret;
+
+      // Privacy
+      document.getElementById('setting-cookie-banner').checked = config.cookieBanner;
+
+      // 4. Sign Out (Return to UC)
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        window.location.href = '/uc.html';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupAdmin);
+  </script>
+</body>
+</html>
