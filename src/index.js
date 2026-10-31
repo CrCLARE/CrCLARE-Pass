@@ -1,12 +1,16 @@
 // ============================================================
-// Nexus - Main Entry Point (Updated)
+// Nexus - Main Entry Point (Cloudflare Workers)
+// SECURITY: Handles Bootstrap interception, API routing, 
+// and static asset serving. Enforces zero-trust by default.
 // ============================================================
 
 import { json, error } from './utils/response.js';
 import { handleSetupAPI } from './routes/setup.js';
 import { getPublicConfig } from './routes/config.js';
 import { handleAuthAPI } from './routes/auth.js';
-import { handleOAuth } from './routes/oauth.js'; // NEW: Import OAuth handler
+import { handleOAuth } from './routes/oauth.js';
+import { handleAdminAPI } from './routes/admin.js';
+import { handleUserAPI } from './routes/user.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -14,47 +18,96 @@ export default {
     const path = url.pathname;
 
     try {
+      // ============================================================
       // 1. Bootstrap Check (The First Gate)
+      // SECURITY: If the system is not initialized, NO API routes 
+      // (except setup) are accessible. All frontend routes redirect to setup.
+      // ============================================================
       let isInitialized = false;
+      
       try {
-        const result = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'is_initialized'").first();
+        // Fail-safe: If DB is down or empty, assume NOT initialized.
+        const result = await env.DB.prepare(
+          "SELECT value FROM system_settings WHERE key = 'is_initialized'"
+        ).first();
         isInitialized = result && result.value === 'true';
       } catch (e) {
-        isInitialized = false;
+        isInitialized = false; 
       }
 
+      // Handle uninitialized state
       if (!isInitialized) {
-        if (path === '/api/setup') return handleSetupAPI(request, env);
-        if (path.startsWith('/api/')) return error('ERR_NOT_INIT', 'System not initialized', 403);
-        if (!path.includes('.')) return Response.redirect(`${url.origin}/setup.html`, 302);
+        if (path === '/api/setup') {
+          return handleSetupAPI(request, env);
+        }
+        
+        // Block all other API requests
+        if (path.startsWith('/api/')) {
+          return error('ERR_NOT_INIT', 'System not initialized', 403);
+        }
+        
+        // Redirect all frontend page requests to the setup page
+        // (Ignore static file requests like .css, .js)
+        if (!path.includes('.') && path !== '/setup.html') {
+          return Response.redirect(`${url.origin}/setup.html`, 302);
+        }
       }
 
+      // ============================================================
+      // 2. Prevent accessing setup after initialization
+      // SECURITY: Once initialized, the setup API is permanently locked.
+      // ============================================================
       if (isInitialized && path === '/api/setup') {
         return error('ERR_ALREADY_INIT', 'System already initialized', 403);
       }
 
-      // 2. API Routing
+      // ============================================================
+      // 3. API Routing (After Initialization)
+      // ============================================================
       if (path.startsWith('/api/')) {
+        
+        // Public Configuration
         if (path === '/api/config/public' && request.method === 'GET') {
           return getPublicConfig(env);
         }
         
+        // Authentication (Login, Register, Verify Email)
         if (path.startsWith('/api/auth')) {
           return handleAuthAPI(request, env);
         }
 
-        if (path.startsWith('/api/oauth')) { // NEW: Route OAuth requests
+        // OAuth (GitHub, Consent, Callbacks)
+        if (path.startsWith('/api/oauth')) {
           return handleOAuth(request, env);
         }
+
+        // Admin Operations (Settings, User Management)
+        if (path.startsWith('/api/admin')) {
+          return handleAdminAPI(request, env);
+        }
+
+        // User Operations (Profile, Security, Export)
+        if (path.startsWith('/api/user')) {
+          return handleUserAPI(request, env);
+        }
         
+        // Fallback for undefined API routes
         return error('ERR_NOT_FOUND', 'API route not found', 404);
       }
 
-      // 3. Serve Static Files
+      // ============================================================
+      // 4. Serve Static Files (Frontend UI)
+      // SECURITY: Cloudflare Workers Assets handles the secure serving 
+      // of HTML, CSS, JS, and images from the /public directory.
+      // ============================================================
       return env.ASSETS.fetch(request);
 
     } catch (e) {
-      console.error('[Core Error]', e);
+      // ============================================================
+      // 5. Global Error Handler
+      // SECURITY: Never leak stack traces to the client.
+      // ============================================================
+      console.error('[Nexus Core Error]', e);
       return error('ERR_SYSTEM_ERROR', 'Internal Server Error', 500);
     }
   }
