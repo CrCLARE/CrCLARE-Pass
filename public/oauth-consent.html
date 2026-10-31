@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorize Application - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base dark theme styling */
+    body { background-color: #18181b; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-[380px] bg-[#202023] p-8 rounded-2xl shadow-2xl relative">
+    
+    <!-- Header (Dynamic Logo & App Name) -->
+    <div class="flex flex-col items-center mb-6">
+      <div id="site-logo-container" class="w-12 h-12 rounded-full bg-[#93c5fd] flex items-center justify-center mb-4 overflow-hidden">
+        <svg id="default-logo" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <img id="dynamic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+      </div>
+      <h1 class="text-xl font-bold text-white mb-2" data-i18n="oauth.title">Authorize Application</h1>
+      <p class="text-[13px] text-gray-400 text-center">
+        <strong class="text-white" id="app-name">Loading...</strong> 
+        <span data-i18n="oauth.request_access">is requesting access to your account.</span>
+      </p>
+    </div>
+
+    <!-- Permissions List (Generic & i18n driven) -->
+    <div class="bg-[#121212] border border-[#3f3f46] rounded-xl p-4 mb-6 space-y-3">
+      <div class="flex items-center gap-3 text-sm text-gray-300">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span data-i18n="oauth.scope_profile">Read your basic profile (Name, Avatar)</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-gray-300">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span data-i18n="oauth.scope_email">Read your email address</span>
+      </div>
+      <div class="flex items-center gap-3 text-sm text-gray-300">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span data-i18n="oauth.scope_badge">Display your verified site badge</span>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+      <button id="cancelBtn" class="flex-1 py-2.5 bg-[#27272a] hover:bg-[#3f3f46] text-white text-sm font-semibold rounded-xl transition-colors" data-i18n="oauth.cancel">Cancel</button>
+      <button id="authorizeBtn" class="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors" data-i18n="oauth.authorize">Authorize</button>
+    </div>
+
+    <!-- Dynamic User Status -->
+    <p class="mt-4 text-[11px] text-gray-500 text-center">
+      <span data-i18n="oauth.logged_in_as">You are logged in as</span> 
+      <span id="display-user" class="text-gray-300 font-medium">...</span>.
+    </p>
+  </div>
+
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+
+    // ============================================================
+    // Nexus - OAuth Consent Logic (Dynamic & Secure)
+    // SECURITY: Strictly validates redirect URIs and uses postMessage
+    // with exact targetOrigin.
+    // ============================================================
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client_id');
+    const redirectUri = urlParams.get('redirect_uri');
+    const state = urlParams.get('state');
+
+    const appNameEl = document.getElementById('app-name');
+    const displayUserEl = document.getElementById('display-user');
+    const authorizeBtn = document.getElementById('authorizeBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const logoContainer = document.getElementById('site-logo-container');
+    const defaultLogo = document.getElementById('default-logo');
+    const dynamicLogo = document.getElementById('dynamic-logo-img');
+
+    let targetOrigin = null;
+
+    async function initConsentPage() {
+      await initI18n();
+
+      // SECURITY: Abort if missing mandatory parameters
+      if (!clientId || !redirectUri) {
+        alert("Invalid authorization request.");
+        window.close();
+        return;
+      }
+
+      try {
+        // SECURITY: Extract the exact origin from the redirect URI to lock down postMessage
+        targetOrigin = new URL(redirectUri).origin;
+      } catch (e) {
+        alert("Invalid redirect URI format.");
+        window.close();
+        return;
+      }
+
+      try {
+        // Fetch App info and current user session
+        const res = await fetch(`/api/oauth/consent-info?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}`);
+        
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error?.message || "Invalid App or Unauthorized redirect URI");
+        }
+
+        const data = await res.json();
+        
+        // Update UI dynamically
+        appNameEl.textContent = data.appName;
+        displayUserEl.textContent = data.user.nickname;
+
+        // Update Logo (if custom logo is set)
+        if (data.siteLogo) {
+          dynamicLogo.src = data.siteLogo;
+          dynamicLogo.classList.remove('hidden');
+          defaultLogo.classList.add('hidden');
+          logoContainer.classList.remove('bg-[#93c5fd]');
+        }
+
+      } catch (err) {
+        console.error('[Consent Error]', err);
+        appNameEl.textContent = "Unknown Application";
+        authorizeBtn.disabled = true;
+        authorizeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        alert(err.message || "Failed to load application details.");
+      }
+    }
+
+    // Handle Authorize Click
+    authorizeBtn.addEventListener('click', async () => {
+      authorizeBtn.disabled = true;
+      authorizeBtn.textContent = 'Authorizing...';
+
+      try {
+        // Request backend to generate a short-lived token for this specific App
+        const res = await fetch('/api/oauth/authorize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            client_id: clientId, 
+            redirect_uri: redirectUri 
+          })
+        });
+
+        if (!res.ok) throw new Error('Authorization failed');
+
+        const data = await res.json();
+
+        // SECURITY: Send token ONLY to the exact targetOrigin that requested it.
+        if (window.opener) {
+          window.opener.postMessage(
+            {
+              type: 'NEXUS_AUTH_SUCCESS',
+              token: data.token,
+              user: data.user,
+              state: state 
+            },
+            targetOrigin 
+          );
+          window.close();
+        } else {
+          document.body.innerHTML = '<div class="text-center text-white p-8">Authorization successful. You can close this window.</div>';
+        }
+
+      } catch (err) {
+        console.error('[Authorize Error]', err);
+        alert('Failed to authorize. Please try again.');
+        authorizeBtn.disabled = false;
+        authorizeBtn.textContent = 'Authorize'; // Should ideally use t('oauth.authorize')
+      }
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      window.close();
+    });
+
+    initConsentPage();
+  </script>
+</body>
+</html>
