@@ -1,24 +1,58 @@
 # ============================================================
 # Nexus (CrCLARE Identity Hub) - Cloudflare Workers Configuration
+# SECURITY: Do not put sensitive data (like passwords or JWT secrets) 
+# in this file. Use `wrangler secret put <KEY>` instead.
 # ============================================================
+
 name = "nexus"
 main = "src/index.js"
 compatibility_date = "2024-04-01"
 
-# D1 Database Binding (The Core Khala)
+# ------------------------------------------------------------
+# Static Assets Configuration
+# Serves the frontend files located in the /public directory.
+# ------------------------------------------------------------
+[assets]
+directory = "./public"
+binding = "ASSETS" # Must match env.ASSETS.fetch(request) in src/index.js
+
+# ------------------------------------------------------------
+# D1 Database Binding
+# SECURITY: Requires a D1 database to store users, keys, and settings.
+# ------------------------------------------------------------
 [[d1_databases]]
-binding = "DB"
+binding = "DB" # Must match env.DB.prepare() in the code
 database_name = "nexus-db"
-database_id = "YOUR_D1_DATABASE_ID" # Replace after creating D1 database
+database_id = "YOUR_D1_DATABASE_ID" # Replace with your actual D1 ID
 
-# KV Namespace Binding (For caching and rate limiting)
+# ------------------------------------------------------------
+# KV Namespace Binding
+# Used for caching sessions, rate limiting, and short-lived tokens.
+# ------------------------------------------------------------
 [[kv_namespaces]]
-binding = "KV"
-id = "YOUR_KV_NAMESPACE_ID" # Replace after creating KV namespace
+binding = "KV" # Must match env.KV.get() / put() in the code
+id = "YOUR_KV_NAMESPACE_ID" # Replace with your actual KV ID
 
-# Environment Variables
+# ------------------------------------------------------------
+# Environment Variables (Non-Sensitive)
+# These are visible in the Cloudflare Dashboard and safe to commit.
+# ------------------------------------------------------------
 [vars]
-# These are non-sensitive defaults. Sensitive data like INIT_ADMIN_PASSWORD 
-# and JWT_SECRET must be set via `wrangler secret put` or Cloudflare Dashboard.
+ENVIRONMENT = "production"
 POWERED_BY_URL = "https://github.com/CrCLARE/Nexus"
-POWERED_BY_TEXT = "Powered by Nexus"
+
+# ============================================================
+# IMPORTANT: REQUIRED SECRETS (DO NOT HARDCODE HERE)
+# ============================================================
+# You MUST set the following secrets via the CLI before deploying:
+#
+# 1. Bootstrap Admin Password (Required for initial setup)
+#    Command: wrangler secret put INIT_ADMIN_PASSWORD
+#
+# 2. JWT Signing Secret (Required for secure HttpOnly cookies)
+#    Command: wrangler secret put JWT_SECRET
+#
+# 3. GitHub OAuth Credentials (If GitHub login is enabled)
+#    Command: wrangler secret put GITHUB_CLIENT_ID
+#    Command: wrangler secret put GITHUB_CLIENT_SECRET
+# ============================================================
