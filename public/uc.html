@@ -24,18 +24,22 @@
 
     /* Modal Overlay */
     .modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+    
+    /* Input focus styles */
+    .form-input { width: 100%; background-color: #121212; border: 1px solid #3f3f46; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #60a5fa; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col md:flex-row">
 
-  <!-- Mobile Header (Visible only on small screens) -->
+  <!-- Mobile Header -->
   <div class="md:hidden bg-[#18181b] border-b border-[#27272a] p-4 flex justify-between items-center">
     <div class="flex items-center gap-2">
       <div id="site-logo-container" class="w-8 h-8 rounded-full bg-[#93c5fd] flex items-center justify-center overflow-hidden">
         <svg id="default-logo" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         <img id="dynamic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
       </div>
-      <span id="site-name" class="text-lg font-bold text-white">Nexus</span>
+      <span id="site-name-mobile" class="text-lg font-bold text-white">Nexus</span>
     </div>
     <button id="mobile-menu-btn" class="text-gray-400 hover:text-white">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -48,7 +52,7 @@
       <div id="desktop-logo-container" class="w-8 h-8 rounded-full bg-[#93c5fd] flex items-center justify-center">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
-      <span class="text-lg font-bold text-white tracking-wide">Nexus UC</span>
+      <span id="site-name" class="text-lg font-bold text-white tracking-wide">Nexus UC</span>
     </div>
     
     <nav class="flex-1 py-4 overflow-y-auto">
@@ -81,15 +85,14 @@
       <!-- Top Header Inside Main -->
       <div class="flex justify-between items-end mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-white mb-2">Hello, <span id="user-nickname">Loading...</span></h1>
+          <h1 class="text-3xl font-bold text-white mb-2">Hello, <span id="user-nickname">...</span></h1>
           <p class="text-gray-400">Manage your Nexus identity and security settings.</p>
         </div>
         <div class="flex items-center gap-4">
-          <!-- Language Switcher Placeholder -->
           <div id="lang-switcher" class="relative flex items-center"></div>
           <div class="text-right">
             <span id="account-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">
-              Standard User
+              Loading...
             </span>
           </div>
         </div>
@@ -106,10 +109,10 @@
             <!-- Avatar Area -->
             <div class="flex items-center gap-6">
               <div class="w-20 h-20 rounded-full bg-[#27272a] flex items-center justify-center text-2xl font-bold text-gray-500 overflow-hidden">
-                <span id="avatar-letter">U</span>
+                <span id="avatar-letter">?</span>
               </div>
               <div>
-                <button class="px-4 py-2 bg-[#27272a] hover:bg-[#3f3f46] text-sm rounded-lg transition-colors">Change Avatar</button>
+                <button class="px-4 py-2 bg-[#27272a] hover:bg-[#3f3f46] text-sm rounded-lg transition-colors" disabled title="V1.1 Feature">Change Avatar</button>
                 <p class="text-xs text-gray-500 mt-2">JPG, GIF or PNG. Max size of 2MB.</p>
               </div>
             </div>
@@ -117,7 +120,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-400 mb-1">Display Name</label>
               <div class="flex gap-2">
-                <input type="text" id="input-nickname" class="w-full bg-[#121212] border border-[#3f3f46] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500">
+                <input type="text" id="input-nickname" class="form-input">
                 <button id="save-nickname-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Save</button>
               </div>
             </div>
@@ -132,17 +135,15 @@
         <!-- Site TXT Verification -->
         <div class="glass-panel p-6">
           <h3 class="text-lg font-semibold text-white mb-2">Site Verification (for Twikoo)</h3>
-          <p class="text-sm text-gray-500 mb-4">Verify your blog domain via TXT record to display the official CrCLARE Pass badge when commenting.</p>
+          <p class="text-sm text-gray-500 mb-4">Verify your blog domain via TXT record to display the official badge when commenting.</p>
           
           <div class="space-y-3" id="domains-container">
-            <!-- Verified Domains will be injected by JS -->
             <div class="text-sm text-gray-500">Loading domains...</div>
           </div>
           
-          <!-- Add New Domain Input -->
           <div class="flex gap-2 mt-4">
-            <input type="text" id="domain-input" placeholder="Add new domain (e.g. myblog.com)..." class="flex-1 bg-[#121212] border border-[#3f3f46] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-            <button id="verify-domain-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Verify TXT</button>
+            <input type="text" id="domain-input" placeholder="Add new domain (e.g. myblog.com)..." class="form-input" disabled title="V1.1 Feature">
+            <button class="px-4 py-2 bg-[#27272a] text-gray-400 text-sm rounded-lg cursor-not-allowed" disabled>Verify TXT</button>
           </div>
         </div>
       </section>
@@ -161,26 +162,25 @@
                 <p class="text-sm font-medium text-white">Password</p>
                 <p class="text-xs text-gray-500">Last changed recently</p>
               </div>
-              <button class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors">Change</button>
+              <button id="change-pwd-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors">Change</button>
             </div>
 
             <!-- Passkey -->
-            <div class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl">
+            <div class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl opacity-60">
               <div class="flex items-center gap-3">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 2a10 10 0 00-6.88 17.23M18.88 19.23A10 10 0 0012 2m-1.56 6.06a1 1 0 011.12 0m-1.88 1.88a2 2 0 013.64 0m-5.76 3.88a8 8 0 0111.24 0m-15 4a12 12 0 0120.8 0M15 14a3 3 0 00-6 0m3 3v4"/></svg>
                 <div>
                   <p class="text-sm font-medium text-white">Passkey (Hardware Key)</p>
-                  <p class="text-xs text-emerald-400" id="passkey-status">Loading status...</p>
+                  <p class="text-xs text-emerald-400" id="passkey-status">Loading...</p>
                 </div>
               </div>
-              <button id="manage-passkey-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors">Manage</button>
+              <button class="px-3 py-1.5 bg-[#27272a] text-gray-400 text-xs rounded-lg cursor-not-allowed" disabled title="V1.1 Feature">Manage</button>
             </div>
 
             <!-- Third-party Accounts -->
             <div class="p-4 bg-[#121212] border border-[#27272a] rounded-xl mt-6">
               <p class="text-sm font-medium text-white mb-3">Third-party Accounts</p>
               <div id="oauth-bindings-container" class="space-y-2">
-                <!-- Injected dynamically by JS based on backend config and user bindings -->
                 <div class="text-sm text-gray-500">Loading bindings...</div>
               </div>
             </div>
@@ -196,7 +196,7 @@
           <h2 class="text-xl font-semibold text-white mb-6">Data & Privacy</h2>
           
           <div class="space-y-4">
-            <!-- Data Export (Dynamically controlled by config.allow_uc_export) -->
+            <!-- Data Export -->
             <div id="export-section" class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl hidden">
               <div>
                 <p class="text-sm font-medium text-white">Export Personal Data</p>
@@ -220,11 +220,7 @@
     </div>
   </main>
 
-  <!-- ========================================== -->
-  <!-- MODALS                                     -->
-  <!-- ========================================== -->
-
-  <!-- Delete Account Confirmation Modal -->
+  <!-- Delete Account Modal -->
   <div id="deleteModal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
     <div class="bg-[#18181b] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
@@ -234,7 +230,7 @@
       <p class="text-sm text-gray-400 mb-6">This action cannot be undone. This will permanently delete your Nexus account and remove all access tokens for connected apps.</p>
       
       <label class="block text-xs font-medium text-gray-400 mb-2">Type your Nexus ID (<span id="modal-nexus-id" class="text-gray-300 font-mono"></span>) to confirm</label>
-      <input type="text" id="delete-confirm-input" class="w-full bg-[#121212] border border-[#3f3f46] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-red-500 mb-6">
+      <input type="text" id="delete-confirm-input" class="form-input mb-6">
       
       <div class="flex gap-3 justify-end">
         <button id="cancel-delete-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
@@ -243,9 +239,29 @@
     </div>
   </div>
 
-  <!-- Footer (Fixed at bottom of main content) -->
-  <div class="fixed bottom-0 right-0 p-4 text-xs text-gray-500">
-    <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">Powered by Nexus</a>
+  <!-- Change Password Modal -->
+  <div id="changePwdModal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+    <div class="bg-[#18181b] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-4">Change Password</h3>
+      
+      <label class="block text-xs font-medium text-gray-400 mb-2">Current Password</label>
+      <input type="password" id="old-pwd-input" class="form-input mb-4">
+      
+      <label class="block text-xs font-medium text-gray-400 mb-2">New Password (Min 8 chars)</label>
+      <input type="password" id="new-pwd-input" class="form-input mb-6">
+      
+      <div class="flex gap-3 justify-end">
+        <button id="cancel-pwd-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
+        <button id="confirm-pwd-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Change Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="fixed bottom-0 right-0 p-4 text-xs text-gray-600 pointer-events-none">
+    <span class="pointer-events-auto">
+      <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="hover:text-gray-400">Powered by Nexus</a>
+    </span>
   </div>
 
   <!-- UC Page Logic -->
@@ -253,35 +269,13 @@
     import { initI18n } from '/js/i18n.js';
     import { initApp } from '/js/app.js';
 
-    /**
-     * Fetches the current user's profile data from the backend.
-     * Placeholder implementation using mock data.
-     */
-    async function fetchUserProfile() {
-      // TODO: Replace with actual API fetch
-      // const res = await fetch('/api/user/me');
-      // return await res.json();
-      
-      // Return generic anonymous mock data
-      return {
-        nickname: 'Anonymous User',
-        nexusId: 'NX-XXXXXX',
-        hasPassword: true,
-        boundOAuths: [], 
-        passkeysCount: 0,
-        verifiedDomains: []
-      };
-    }
-
     async function setupUC() {
-      // 1. Initialize dynamic config and i18n
       await initI18n();
       await initApp();
 
-      // 2. Setup Navigation Tabs
+      // Setup Navigation Tabs
       const navItems = document.querySelectorAll('.nav-item');
       const tabs = document.querySelectorAll('.tab-content');
-
       navItems.forEach(item => {
         item.addEventListener('click', () => {
           navItems.forEach(nav => {
@@ -290,55 +284,100 @@
           });
           item.classList.add('active', 'text-gray-300');
           item.classList.remove('text-gray-400');
-
           tabs.forEach(tab => tab.classList.remove('active'));
           document.getElementById(item.dataset.target).classList.add('active');
         });
       });
 
-      // 3. Fetch and Populate User Data Dynamically
-      const user = await fetchUserProfile();
-      
-      document.getElementById('avatar-letter').textContent = user.nickname.charAt(0).toUpperCase();
-      document.getElementById('user-nickname').textContent = user.nickname;
-      document.getElementById('input-nickname').value = user.nickname;
-      document.getElementById('input-nexus-id').value = user.nexusId;
-      document.getElementById('modal-nexus-id').textContent = user.nexusId;
+      // 1. Fetch User Data
+      let user = null;
+      try {
+        const res = await fetch('/api/user/me');
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        user = await res.json();
+        
+        // Populate UI
+        document.getElementById('user-nickname').textContent = user.nickname;
+        document.getElementById('avatar-letter').textContent = user.nickname.charAt(0).toUpperCase();
+        document.getElementById('input-nickname').value = user.nickname;
+        document.getElementById('input-nexus-id').value = user.nexusId;
+        document.getElementById('modal-nexus-id').textContent = user.nexusId;
+        
+        // Role Badge
+        const badge = document.getElementById('account-badge');
+        if (user.role === 'super_admin' || user.role === 'admin') {
+          badge.textContent = 'Administrator';
+          badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-semibold border border-purple-500/20';
+        } else {
+          badge.textContent = 'Standard User';
+        }
 
-      // Render Passkey Status
-      const passkeyStatus = document.getElementById('passkey-status');
-      if (user.passkeysCount > 0) {
-        passkeyStatus.textContent = `${user.passkeysCount} device(s) bound`;
-        passkeyStatus.className = 'text-xs text-emerald-400';
-      } else {
-        passkeyStatus.textContent = 'No devices bound';
-        passkeyStatus.className = 'text-xs text-gray-500';
+        // Passkey Status
+        const passkeyStatus = document.getElementById('passkey-status');
+        if (user.passkeysCount > 0) {
+          passkeyStatus.textContent = `${user.passkeysCount} device(s) bound`;
+          passkeyStatus.className = 'text-xs text-emerald-400';
+        } else {
+          passkeyStatus.textContent = 'No devices bound';
+          passkeyStatus.className = 'text-xs text-gray-500';
+        }
+
+        // Data Export Toggle
+        if (window.NEXUS_CONFIG.allow_uc_export) {
+          document.getElementById('export-section').classList.remove('hidden');
+        }
+
+      } catch (err) {
+        console.error('Failed to load user data', err);
       }
 
-      // Render Verified Domains
-      const domainsContainer = document.getElementById('domains-container');
-      domainsContainer.innerHTML = '';
-      if (user.verifiedDomains && user.verifiedDomains.length > 0) {
-        user.verifiedDomains.forEach(domain => {
-          const domainEl = document.createElement('div');
-          domainEl.className = "flex items-center justify-between bg-[#121212] border border-[#3f3f46] rounded-lg p-3";
-          domainEl.innerHTML = `
-            <div class="flex items-center gap-3">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-              <div>
-                <p class="text-sm font-medium text-white">${domain}</p>
-                <p class="text-xs text-emerald-400">Verified</p>
-              </div>
-            </div>
-            <button class="text-xs text-red-400 hover:text-red-300">Remove</button>
-          `;
-          domainsContainer.appendChild(domainEl);
+      // 2. Save Nickname Logic
+      document.getElementById('save-nickname-btn').addEventListener('click', async () => {
+        const newNickname = document.getElementById('input-nickname').value.trim();
+        if (!newNickname) return alert("Nickname cannot be empty.");
+        
+        try {
+          const res = await fetch('/api/user/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: newNickname })
+          });
+          if (res.ok) {
+            alert('Nickname updated successfully!');
+            window.location.reload();
+          } else {
+            alert('Failed to update nickname.');
+          }
+        } catch (err) { alert('Network error.'); }
+      });
+
+      // 3. Export Data Logic
+      const exportBtn = document.getElementById('export-data-btn');
+      if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+          try {
+            const res = await fetch('/api/user/export');
+            if (res.ok) {
+              const blob = await res.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `nexus-export-${user.nexusId}.json`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            } else {
+              alert('Export disabled or failed.');
+            }
+          } catch (err) { alert('Network error.'); }
         });
-      } else {
-        domainsContainer.innerHTML = '<div class="text-sm text-gray-500 mb-4">No verified domains yet.</div>';
       }
 
-      // 4. Render Third-party Bindings
+      // 4. Render OAuth Bindings
       const oauthContainer = document.getElementById('oauth-bindings-container');
       const config = window.NEXUS_CONFIG;
       
@@ -346,8 +385,7 @@
         oauthContainer.innerHTML = '';
         
         const providerMeta = {
-          github: { name: 'GitHub', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>' },
-          google: { name: 'Google', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>' }
+          github: { name: 'GitHub', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>' }
         };
 
         config.enabledOAuths.forEach(providerKey => {
@@ -363,7 +401,7 @@
               ${meta.icon}
               ${meta.name}
             </div>
-            <button class="text-xs ${isBound ? 'text-red-400 hover:text-red-300' : 'text-blue-400 hover:text-blue-300'}">
+            <button class="text-xs ${isBound ? 'text-red-400 hover:text-red-300' : 'text-blue-400 hover:text-blue-300'}" onclick="alert('Binding logic will be implemented in V1.1')">
               ${isBound ? 'Unbind' : 'Bind'}
             </button>
           `;
@@ -373,12 +411,46 @@
         oauthContainer.innerHTML = '<p class="text-sm text-gray-500">No third-party logins are enabled.</p>';
       }
 
-      // 5. Data Export Visibility (Controlled by Admin)
-      if (config.allow_uc_export) {
-        document.getElementById('export-section').classList.remove('hidden');
-      }
+      // 5. Change Password Modal Logic
+      const changePwdBtn = document.getElementById('change-pwd-btn');
+      const changePwdModal = document.getElementById('changePwdModal');
+      const cancelPwdBtn = document.getElementById('cancel-pwd-btn');
+      const confirmPwdBtn = document.getElementById('confirm-pwd-btn');
 
-      // 6. Setup Delete Account Modal Logic
+      changePwdBtn.addEventListener('click', () => {
+        document.getElementById('old-pwd-input').value = '';
+        document.getElementById('new-pwd-input').value = '';
+        changePwdModal.classList.remove('hidden');
+      });
+
+      cancelPwdBtn.addEventListener('click', () => changePwdModal.classList.add('hidden'));
+
+      confirmPwdBtn.addEventListener('click', async () => {
+        const oldPassword = document.getElementById('old-pwd-input').value;
+        const newPassword = document.getElementById('new-pwd-input').value;
+
+        if (!oldPassword || !newPassword || newPassword.length < 8) {
+          return alert("Please enter a valid old and new password (min 8 chars).");
+        }
+
+        try {
+          const res = await fetch('/api/user/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldPassword, newPassword })
+          });
+          
+          if (res.ok) {
+            alert('Password changed successfully!');
+            changePwdModal.classList.add('hidden');
+          } else {
+            const data = await res.json();
+            alert(data.error?.message || 'Failed to change password.');
+          }
+        } catch (err) { alert('Network error.'); }
+      });
+
+      // 6. Delete Account Logic
       const deleteBtn = document.getElementById('delete-account-btn');
       const deleteModal = document.getElementById('deleteModal');
       const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
@@ -391,9 +463,7 @@
         confirmDeleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
       });
 
-      cancelDeleteBtn.addEventListener('click', () => {
-        deleteModal.classList.add('hidden');
-      });
+      cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
 
       deleteConfirmInput.addEventListener('input', (e) => {
         if (e.target.value === user.nexusId) {
@@ -403,14 +473,21 @@
         }
       });
 
-      confirmDeleteBtn.addEventListener('click', () => {
+      confirmDeleteBtn.addEventListener('click', async () => {
         if (deleteConfirmInput.value === user.nexusId) {
-          alert('Account deletion request sent. (API not connected yet)');
-          deleteModal.classList.add('hidden');
+          try {
+            const res = await fetch('/api/user/delete-account', { method: 'POST' });
+            if (res.ok) {
+              alert('Account permanently deleted.');
+              window.location.href = '/login.html';
+            } else {
+              alert('Failed to delete account.');
+            }
+          } catch (err) { alert('Network error.'); }
         }
       });
 
-      // 7. Sign Out
+      // 7. Logout
       document.getElementById('logoutBtn').addEventListener('click', () => {
         document.cookie = "nexus_session=; Max-Age=0; path=/;";
         window.location.href = '/login.html';

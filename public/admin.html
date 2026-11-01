@@ -26,6 +26,7 @@
     .form-label { display: block; font-size: 13px; font-weight: 500; color: #a1a1aa; margin-bottom: 6px; }
     .btn-primary { background-color: #3b82f6; color: #fff; border-radius: 8px; font-weight: 600; padding: 8px 16px; font-size: 14px; transition: background-color 0.2s; }
     .btn-primary:hover { background-color: #2563eb; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     
     /* Toggle Switch */
     .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
@@ -91,7 +92,7 @@
 
     <!-- Footer Action -->
     <div class="p-4 border-t border-[#27272a]">
-      <button id="logoutBtn" class="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-400 hover:text-white hover:bg-[#27272a] rounded-lg transition-colors">
+      <button id="exitToUcBtn" class="flex items-center gap-3 px-4 py-2 w-full text-sm text-gray-400 hover:text-white hover:bg-[#27272a] rounded-lg transition-colors">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Exit to UC
       </button>
@@ -170,7 +171,7 @@
               <label class="form-label">Powered By Text</label>
               <input type="text" id="setting-powered-by" class="form-input" placeholder="Powered by Nexus">
             </div>
-            <button class="btn-primary mt-2">Save Branding</button>
+            <button id="save-site-btn" class="btn-primary mt-2">Save Branding</button>
           </div>
         </div>
       </section>
@@ -232,7 +233,7 @@
                 <option value="recaptcha">Google reCAPTCHA</option>
               </select>
             </div>
-            <button class="btn-primary mt-2">Save Auth Settings</button>
+            <button id="save-auth-btn" class="btn-primary mt-2">Save Auth Settings</button>
           </div>
         </div>
       </section>
@@ -260,7 +261,7 @@
               <label class="form-label">Client Secret</label>
               <input type="password" id="setting-github-secret" class="form-input" placeholder="••••••••••••••••">
             </div>
-            <button class="btn-primary mt-2">Save GitHub Settings</button>
+            <button id="save-oauth-btn" class="btn-primary mt-2">Save GitHub Settings</button>
           </div>
         </div>
       </section>
@@ -313,13 +314,10 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="users-table-body">
+              <!-- Dynamic user rows will be injected here -->
               <tr>
-                <td class="font-mono text-gray-400">NX-XXXXXX</td>
-                <td class="text-white">user@example.com</td>
-                <td class="text-gray-400">User</td>
-                <td><span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs rounded border border-emerald-500/20">Active</span></td>
-                <td><button class="text-red-400 hover:text-red-300 text-sm">Ban</button></td>
+                <td colspan="5" class="text-center text-gray-500 py-4">Loading users...</td>
               </tr>
             </tbody>
           </table>
@@ -354,7 +352,7 @@
                <label class="form-label">Terms of Service (Markdown Supported)</label>
                <textarea id="setting-tos" class="form-input h-32 font-mono text-sm" placeholder="# Terms of Service..."></textarea>
              </div>
-             <button class="btn-primary mt-2">Save Documents</button>
+             <button id="save-privacy-btn" class="btn-primary mt-2">Save Documents</button>
           </div>
         </div>
       </section>
@@ -373,12 +371,9 @@
                 <th>Details</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="logs-table-body">
               <tr>
-                <td class="text-gray-400 whitespace-nowrap">Just now</td>
-                <td class="text-white">admin@example.com</td>
-                <td class="text-blue-400">settings.update</td>
-                <td class="text-gray-400">Updated GitHub OAuth settings</td>
+                <td colspan="4" class="text-center text-gray-500 py-4">No activity logs available.</td>
               </tr>
             </tbody>
           </table>
@@ -400,32 +395,6 @@
     import { initI18n } from '/js/i18n.js';
     import { initApp } from '/js/app.js';
 
-    /**
-     * Fetches all admin configuration from the backend.
-     * Placeholder implementation.
-     */
-    async function fetchAdminConfig() {
-      // TODO: Replace with actual API fetch
-      // const res = await fetch('/api/admin/config');
-      // return await res.json();
-      
-      return {
-        stats: { users: 142, oauth: 89, apps: 3 },
-        siteName: 'Nexus',
-        siteLogo: '',
-        poweredBy: 'Powered by Nexus',
-        requireEmail: true,
-        allowExport: true,
-        pwdLength: 8,
-        pwdComplexity: 'strong',
-        captcha: 'turnstile',
-        githubEnable: true,
-        githubId: 'Iv1.1234567890',
-        githubSecret: '••••••••••••••••',
-        cookieBanner: true
-      };
-    }
-
     async function setupAdmin() {
       // 1. Initialize dynamic config and i18n
       await initI18n();
@@ -438,7 +407,6 @@
 
       navItems.forEach(item => {
         item.addEventListener('click', () => {
-          // Update sidebar active state
           navItems.forEach(nav => {
             nav.classList.remove('active', 'text-gray-300');
             nav.classList.add('text-gray-400');
@@ -446,46 +414,117 @@
           item.classList.add('active', 'text-gray-300');
           item.classList.remove('text-gray-400');
 
-          // Switch Tab Content
           tabs.forEach(tab => tab.classList.remove('active'));
           const targetId = item.dataset.target;
           document.getElementById(targetId).classList.add('active');
-
-          // Update Page Title
+          
           pageTitle.textContent = item.textContent.trim();
         });
       });
 
-      // 3. Load and Populate Data
-      const config = await fetchAdminConfig();
+      // 3. Fetch and Populate Settings from Database
+      try {
+        const res = await fetch('/api/admin/settings');
+        if (res.status === 401 || res.status === 403) {
+          // Unauthorized, kick back to login
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const config = await res.json();
+        
+        // Populate Site Settings
+        document.getElementById('setting-site-name').value = config.site_name || 'Nexus';
+        document.getElementById('setting-site-logo').value = config.site_logo || '';
+        document.getElementById('setting-powered-by').value = config.powered_by_text || 'Powered by Nexus';
+        
+        // Populate Auth Settings
+        document.getElementById('setting-req-email').checked = config.require_email_verify === 'true';
+        document.getElementById('setting-allow-export').checked = config.allow_uc_export === 'true';
+        document.getElementById('setting-pwd-length').value = config.pwd_min_length || 8;
+        document.getElementById('setting-pwd-complexity').value = config.pwd_require_strong === 'true' ? 'strong' : 'basic';
+        document.getElementById('setting-captcha').value = config.captcha_provider || 'none';
 
-      // Stats
-      document.getElementById('stat-users').textContent = config.stats.users;
-      document.getElementById('stat-oauth').textContent = config.stats.oauth;
-      document.getElementById('stat-apps').textContent = config.stats.apps;
+        // Populate OAuth Settings
+        if (config.enabled_oauths) {
+          try {
+            const oauths = JSON.parse(config.enabled_oauths);
+            document.getElementById('setting-github-enable').checked = oauths.includes('github');
+          } catch (e) {}
+        }
+        document.getElementById('setting-github-id').value = config.github_client_id || '';
+        // SECURITY: Only populate masked secret to prevent accidental overwrite if unchanged
+        document.getElementById('setting-github-secret').value = config.github_client_secret || '';
 
-      // Site Settings
-      document.getElementById('setting-site-name').value = config.siteName;
-      document.getElementById('setting-site-logo').value = config.siteLogo;
-      document.getElementById('setting-powered-by').value = config.poweredBy;
+        // Populate Privacy Settings
+        document.getElementById('setting-cookie-banner').checked = config.enable_cookie_banner === 'true';
+        document.getElementById('setting-tos').value = config.terms_version || ''; // Placeholder for real markdown
 
-      // Auth & Security
-      document.getElementById('setting-req-email').checked = config.requireEmail;
-      document.getElementById('setting-allow-export').checked = config.allowExport;
-      document.getElementById('setting-pwd-length').value = config.pwdLength;
-      document.getElementById('setting-pwd-complexity').value = config.pwdComplexity;
-      document.getElementById('setting-captcha').value = config.captcha;
+      } catch (err) {
+        console.error('[Admin] Failed to load settings:', err);
+      }
 
-      // OAuth
-      document.getElementById('setting-github-enable').checked = config.githubEnable;
-      document.getElementById('setting-github-id').value = config.githubId;
-      document.getElementById('setting-github-secret').value = config.githubSecret;
+      // 4. Helper function to save settings
+      async function saveSettings(payload) {
+        try {
+          const res = await fetch('/api/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          const data = await res.json();
+          if (res.ok) {
+            alert('Settings saved successfully!');
+            // Reload to apply branding changes (Logo, Site Name) across the whole UI
+            window.location.reload();
+          } else {
+            alert('Failed to save: ' + (data.error?.message || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error('[Admin] Save error:', err);
+          alert('Network error while saving settings.');
+        }
+      }
 
-      // Privacy
-      document.getElementById('setting-cookie-banner').checked = config.cookieBanner;
+      // 5. Bind Save Buttons
+      document.getElementById('save-site-btn').addEventListener('click', () => {
+        saveSettings({
+          site_name: document.getElementById('setting-site-name').value,
+          site_logo: document.getElementById('setting-site-logo').value,
+          powered_by_text: document.getElementById('setting-powered-by').value
+        });
+      });
 
-      // 4. Sign Out (Return to UC)
-      document.getElementById('logoutBtn').addEventListener('click', () => {
+      document.getElementById('save-auth-btn').addEventListener('click', () => {
+        saveSettings({
+          require_email_verify: document.getElementById('setting-req-email').checked,
+          allow_uc_export: document.getElementById('setting-allow-export').checked,
+          pwd_min_length: document.getElementById('setting-pwd-length').value,
+          pwd_require_strong: document.getElementById('setting-pwd-complexity').value === 'strong',
+          captcha_provider: document.getElementById('setting-captcha').value
+        });
+      });
+
+      document.getElementById('save-oauth-btn').addEventListener('click', () => {
+        const githubEnabled = document.getElementById('setting-github-enable').checked;
+        saveSettings({
+          enabled_oauths: githubEnabled ? ['github'] : [],
+          github_client_id: document.getElementById('setting-github-id').value,
+          github_client_secret: document.getElementById('setting-github-secret').value
+        });
+      });
+
+      document.getElementById('save-privacy-btn').addEventListener('click', () => {
+        saveSettings({
+          enable_cookie_banner: document.getElementById('setting-cookie-banner').checked,
+          // In a real app, save the markdown content here
+          terms_version: 'v1.0' 
+        });
+      });
+
+      // 6. Exit to UC
+      document.getElementById('exitToUcBtn').addEventListener('click', () => {
         window.location.href = '/uc.html';
       });
     }

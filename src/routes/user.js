@@ -6,6 +6,7 @@
 
 import { json, error } from '../utils/response.js';
 import { getAuthenticatedUser } from '../middleware/auth.js';
+import { hashPassword, verifyPassword } from '../utils/crypto.js';
 
 export async function handleUserAPI(request, env) {
   const url = new URL(request.url);
@@ -19,30 +20,32 @@ export async function handleUserAPI(request, env) {
 
   // ==========================================
   // GET /api/user/me
-  // Fetch current user's full profile
   // ==========================================
   if (path === '/api/user/me' && request.method === 'GET') {
     try {
-      // Fetch basic info
       const profile = await env.DB.prepare(
-        "SELECT id, email, role, app_enabled, created_at FROM users WHERE id = ?"
+        "SELECT id, email, role, nickname, app_enabled, created_at FROM users WHERE id = ?"
       ).bind(user.id).first();
 
-      // Fetch bound OAuths
       const oauths = await env.DB.prepare(
         "SELECT provider FROM oauth_accounts WHERE user_id = ?"
       ).bind(user.id).all();
       
-      const boundOAuths = oauths.results.map(o => o.provider);
+      const passkeys = await env.DB.prepare(
+        "SELECT COUNT(*) as count FROM passkeys WHERE user_id = ?"
+      ).bind(user.id).first();
+
+      const boundOAuths = oauths.results ? oauths.results.map(o => o.provider) : [];
 
       return json({
         nexusId: profile.id,
         email: profile.email,
         role: profile.role,
+        nickname: profile.nickname || profile.email.split('@')[0], // Fallback to email prefix
         appEnabled: profile.app_enabled === 1,
+        passkeysCount: passkeys ? passkeys.count : 0,
         createdAt: profile.created_at,
-        boundOAuths: boundOAuths,
-        // domains: [] // TODO: Fetch from domain verification table
+        boundOAuths: boundOAuths
       });
     } catch (e) {
       return error('ERR_DB', 'Failed to fetch user data', 500);
@@ -51,23 +54,19 @@ export async function handleUserAPI(request, env) {
 
   // ==========================================
   // POST /api/user/update-profile
-  // (Placeholder for updating display name)
   // ==========================================
   if (path === '/api/user/update-profile' && request.method === 'POST') {
     try {
       const { nickname } = await request.json();
       
-      // SECURITY: Nickname length validation
       if (!nickname || nickname.length > 32) {
-        return error('ERR_INVALID_INPUT', 'Invalid nickname', 400);
+        return error('ERR_INVALID_INPUT', 'Invalid nickname (Max 32 chars)', 400);
       }
 
-      // SECURITY: Use user.id from the token, NEVER trust a user_id in the body (IDOR prevention)
       await env.DB.prepare(
-        "UPDATE users SET updated_at = ? WHERE id = ?"
-      ).bind(Date.now(), user.id).run();
+        "UPDATE users SET nickname = ?, updated_at = ? WHERE id = ?"
+      ).bind(nickname, Date.now(), user.id).run();
       
-      // Note: In a real schema, you'd update a 'nickname' column here.
       return json({ success: true, message: 'Profile updated' });
     } catch (e) {
       return error('ERR_DB', 'Failed to update profile', 500);
@@ -75,24 +74,83 @@ export async function handleUserAPI(request, env) {
   }
 
   // ==========================================
-  // POST /api/user/domain/verify
-  // SECURITY: Initiates TXT record verification
+  // POST /api/user/change-password
   // ==========================================
-  if (path === '/api/user/domain/verify' && request.method === 'POST') {
+  if (path === '/api/user/change-password' && request.method === 'POST') {
     try {
-      const { domain } = await request.json();
-      
-      if (!domain) return error('ERR_INVALID_INPUT', 'Domain required', 400);
+      const { oldPassword, newPassword } = await request.json();
+      if (!oldPassword || !newPassword || newPassword.length < 8) {
+        return error('ERR_INVALID_INPUT', 'Invalid password format', 400);
+      }
 
-      // TODO: Implement Cloudflare DNS over HTTPS (DoH) lookup
-      // 1. Generate a unique token: `nexus-verify=${crypto.randomUUID()}`
-      // 2. Query DoH API: https://cloudflare-dns.com/dns-query?name=${domain}&type=TXT
-      // 3. Check if the token exists in the response.
-      // 4. If valid, insert into a `verified_domains` table.
+      const dbUser = await env.DB.prepare("SELECT password_hash, password_salt FROM users WHERE id = ?").bind(user.id).first();
       
-      return json({ success: true, message: 'Verification logic to be implemented' });
+      // SECURITY: Verify old password before allowing change
+      if (dbUser.password_hash) {
+        const isValid = await verifyPassword(oldPassword, dbUser.password_hash, dbUser.password_salt);
+        if (!isValid) return error('ERR_INVALID_CREDENTIALS', 'Incorrect old password', 401);
+      }
+
+      const { hash, salt } = await hashPassword(newPassword);
+      await env.DB.prepare(
+        "UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?"
+      ).bind(hash, salt, Date.now(), user.id).run();
+
+      return json({ success: true, message: 'Password changed successfully' });
     } catch (e) {
-      return error('ERR_DB', 'Failed to verify domain', 500);
+      return error('ERR_DB', 'Failed to change password', 500);
+    }
+  }
+
+  // ==========================================
+  // GET /api/user/export
+  // SECURITY: Generates a JSON payload of all user data (GDPR)
+  // ==========================================
+  if (path === '/api/user/export' && request.method === 'GET') {
+    try {
+      // Check if admin allows export
+      const allowExport = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'allow_uc_export'").first();
+      if (allowExport && allowExport.value === 'false') {
+        return error('ERR_FORBIDDEN', 'Data export is disabled by administrator', 403);
+      }
+
+      const profile = await env.DB.prepare("SELECT id, email, role, nickname, created_at FROM users WHERE id = ?").bind(user.id).first();
+      const oauths = await env.DB.prepare("SELECT provider, created_at FROM oauth_accounts WHERE user_id = ?").bind(user.id).all();
+      
+      const exportData = {
+        export_date: new Date().toISOString(),
+        nexus_id: profile.id,
+        email: profile.email,
+        nickname: profile.nickname,
+        role: profile.role,
+        joined_at: profile.created_at,
+        connected_accounts: oauths.results || []
+      };
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="nexus-export-${profile.id}.json"`
+      };
+
+      return new Response(JSON.stringify(exportData, null, 2), { status: 200, headers });
+    } catch (e) {
+      return error('ERR_DB', 'Failed to export data', 500);
+    }
+  }
+
+  // ==========================================
+  // POST /api/user/delete-account
+  // ==========================================
+  if (path === '/api/user/delete-account' && request.method === 'POST') {
+    try {
+      // SECURITY: Soft-delete or hard-delete. Here we do a hard delete (cascade deletes bindings)
+      await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id).run();
+      
+      // Clear session cookie
+      const cookieHeader = 'nexus_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+      return json({ success: true, message: 'Account deleted' }, 200, { 'Set-Cookie': cookieHeader });
+    } catch (e) {
+      return error('ERR_DB', 'Failed to delete account', 500);
     }
   }
 

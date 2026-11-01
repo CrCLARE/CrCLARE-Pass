@@ -4,7 +4,7 @@
 # in this file. Use `wrangler secret put <KEY>` instead.
 # ============================================================
 
-name = "nexus"
+name = "crclare-pass"
 main = "src/index.js"
 compatibility_date = "2024-04-01"
 
@@ -23,7 +23,7 @@ binding = "ASSETS" # Must match env.ASSETS.fetch(request) in src/index.js
 [[d1_databases]]
 binding = "DB" # Must match env.DB.prepare() in the code
 database_name = "nexus-db"
-database_id = "YOUR_D1_DATABASE_ID" # Replace with your actual D1 ID
+database_id = "3ca0031f-1bef-46c8-b7db-deaad4a7a32b" # Replace with your actual D1 ID
 
 # ------------------------------------------------------------
 # KV Namespace Binding
@@ -31,7 +31,7 @@ database_id = "YOUR_D1_DATABASE_ID" # Replace with your actual D1 ID
 # ------------------------------------------------------------
 [[kv_namespaces]]
 binding = "KV" # Must match env.KV.get() / put() in the code
-id = "YOUR_KV_NAMESPACE_ID" # Replace with your actual KV ID
+id = "5bf77a72ad1c4f2a9c3b50827991a48e" # Replace with your actual KV ID
 
 # ------------------------------------------------------------
 # Environment Variables (Non-Sensitive)

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Select Workspace - Nexus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Base dark theme styling */
+    body { 
+      background-color: #121212; 
+      color: #e4e4e7; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Card hover animations */
+    .workspace-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: 1px solid #27272a;
+    }
+    .workspace-card:hover {
+      transform: translateY(-8px);
+      border-color: #52525b;
+    }
+    
+    /* Specific hover glows */
+    .card-uc:hover { box-shadow: 0 10px 40px -10px rgba(96, 165, 250, 0.3); }
+    .card-admin:hover { box-shadow: 0 10px 40px -10px rgba(167, 139, 250, 0.3); }
+  </style>
+</head>
+<body>
+
+  <div class="max-w-4xl w-full px-6">
+    
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-3xl font-bold text-white mb-3" data-i18n="select.title">Where would you like to go?</h1>
+      <p class="text-gray-400" data-i18n="select.subtitle">As an administrator, you have access to both workspaces.</p>
+    </div>
+
+    <!-- Workspace Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- User Center (UC) -->
+      <a href="/uc.html" class="workspace-card card-uc bg-[#18181b] rounded-3xl p-8 flex flex-col items-center text-center relative overflow-hidden group">
+        <!-- Icon Background Glow -->
+        <div class="absolute top-0 w-full h-32 bg-gradient-to-b from-blue-500/10 to-transparent"></div>
+        
+        <div class="w-20 h-20 rounded-full bg-[#27272a] flex items-center justify-center mb-6 relative z-10 group-hover:bg-blue-500/20 transition-colors">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-2" data-i18n="select.uc">User Center</h2>
+        <p class="text-sm text-gray-500" data-i18n="select.uc_desc">Manage your personal profile, security settings, and authorized apps.</p>
+      </a>
+
+      <!-- Admin Dashboard -->
+      <a href="/admin.html" class="workspace-card card-admin bg-[#18181b] rounded-3xl p-8 flex flex-col items-center text-center relative overflow-hidden group">
+        <!-- Icon Background Glow -->
+        <div class="absolute top-0 w-full h-32 bg-gradient-to-b from-purple-500/10 to-transparent"></div>
+        
+        <div class="w-20 h-20 rounded-full bg-[#27272a] flex items-center justify-center mb-6 relative z-10 group-hover:bg-purple-500/20 transition-colors">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-2" data-i18n="select.admin">Admin Dashboard</h2>
+        <p class="text-sm text-gray-500" data-i18n="select.admin_desc">Configure system settings, manage users, and view audit logs.</p>
+      </a>
+
+    </div>
+    
+    <!-- Logout Link -->
+    <div class="text-center mt-12">
+      <button id="logoutBtn" class="text-sm text-gray-500 hover:text-gray-300 transition-colors" data-i18n="select.logout">Not you? Sign out</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-8 text-[13px] text-gray-600">
+      <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="hover:text-gray-400">Powered by Nexus</a>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initI18n } from '/js/i18n.js';
+    import { initApp } from '/js/app.js';
+
+    async function setupRoleSelect() {
+      // Initialize dynamic config and i18n
+      await initI18n();
+      await initApp();
+
+      // Handle Logout
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        // Clear HttpOnly cookie
+        document.cookie = "nexus_session=; Max-Age=0; path=/;";
+        window.location.href = '/login.html';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupRoleSelect);
+  </script>
+</body>
+</html>

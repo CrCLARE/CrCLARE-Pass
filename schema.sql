@@ -16,11 +16,12 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     role TEXT NOT NULL DEFAULT 'user', -- 'user', 'admin', 'super_admin'
+    nickname TEXT, -- Display name
     password_hash TEXT,
     password_salt TEXT,
     totp_secret TEXT,
     app_enabled INTEGER DEFAULT 0, -- Advanced Protection Program flag
-    status TEXT DEFAULT 'active', -- 'active', 'banned'
+    status TEXT DEFAULT 'active', -- 'active', 'banned', 'pending'
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
