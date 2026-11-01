@@ -6,31 +6,28 @@
   <title>User Center - Nexus</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Base dark theme styling */
     body { background-color: #121212; color: #e4e4e7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    
-    /* Card and Panel styles */
     .glass-panel { background: #18181b; border: 1px solid #27272a; border-radius: 16px; }
-    
-    /* Sidebar navigation styles */
     .nav-item { transition: all 0.2s; cursor: pointer; border-left: 3px solid transparent; }
     .nav-item:hover { background-color: #1e1e21; }
     .nav-item.active { background-color: #27272a; color: #93c5fd; border-left-color: #93c5fd; }
-    
-    /* Tab content display logic */
     .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
     .tab-content.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Modal Overlay */
     .modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
-    
-    /* Input focus styles */
     .form-input { width: 100%; background-color: #121212; border: 1px solid #3f3f46; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s; }
     .form-input:focus { border-color: #60a5fa; }
+    
+    /* Auth loading overlay to prevent FOUC */
+    #auth-overlay { position: fixed; inset: 0; background: #121212; z-index: 9999; display: flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col md:flex-row">
+
+  <!-- Auth Guard Overlay -->
+  <div id="auth-overlay">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+  </div>
 
   <!-- Mobile Header -->
   <div class="md:hidden bg-[#18181b] border-b border-[#27272a] p-4 flex justify-between items-center">
@@ -56,25 +53,13 @@
     </div>
     
     <nav class="flex-1 py-4 overflow-y-auto">
-      <div class="nav-item active flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300" data-target="tab-profile">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Profile & Identity
-      </div>
-      <div class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400" data-target="tab-security">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Security & Auth
-      </div>
-      <div class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400" data-target="tab-privacy">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Data & Privacy
-      </div>
+      <div class="nav-item active flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-300" data-target="tab-profile" data-i18n="uc.tab_profile">Profile & Identity</div>
+      <div class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400" data-target="tab-security" data-i18n="uc.tab_security">Security & Auth</div>
+      <div class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400" data-target="tab-privacy" data-i18n="uc.tab_privacy">Data & Privacy</div>
     </nav>
 
     <div class="p-4 border-t border-[#27272a]">
-      <button id="logoutBtn" class="flex items-center gap-3 px-4 py-2 w-full text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign Out
-      </button>
+      <button id="logoutBtn" class="flex items-center gap-3 px-4 py-2 w-full text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" data-i18n="uc.sign_out">Sign Out</button>
     </div>
   </aside>
 
@@ -82,198 +67,142 @@
   <main class="flex-1 p-6 md:p-12 overflow-y-auto h-screen">
     <div class="max-w-3xl mx-auto space-y-8">
       
-      <!-- Top Header Inside Main -->
       <div class="flex justify-between items-end mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-white mb-2">Hello, <span id="user-nickname">...</span></h1>
-          <p class="text-gray-400">Manage your Nexus identity and security settings.</p>
+          <h1 class="text-3xl font-bold text-white mb-2"><span data-i18n="uc.hello">Hello</span>, <span id="user-nickname">...</span></h1>
+          <p class="text-gray-400" data-i18n="uc.manage_desc">Manage your Nexus identity and security settings.</p>
         </div>
         <div class="flex items-center gap-4">
           <div id="lang-switcher" class="relative flex items-center"></div>
           <div class="text-right">
-            <span id="account-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">
-              Loading...
-            </span>
+            <span id="account-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">Loading...</span>
           </div>
         </div>
       </div>
 
-      <!-- ========================================== -->
-      <!-- TAB 1: Profile & Identity                  -->
-      <!-- ========================================== -->
+      <!-- TAB 1: Profile -->
       <section id="tab-profile" class="tab-content active space-y-6">
         <div class="glass-panel p-6">
-          <h2 class="text-xl font-semibold text-white mb-6">Profile Information</h2>
-          
+          <h2 class="text-xl font-semibold text-white mb-6" data-i18n="uc.profile_title">Profile Information</h2>
           <div class="space-y-6">
-            <!-- Avatar Area -->
             <div class="flex items-center gap-6">
               <div class="w-20 h-20 rounded-full bg-[#27272a] flex items-center justify-center text-2xl font-bold text-gray-500 overflow-hidden">
                 <span id="avatar-letter">?</span>
               </div>
               <div>
-                <button class="px-4 py-2 bg-[#27272a] hover:bg-[#3f3f46] text-sm rounded-lg transition-colors" disabled title="V1.1 Feature">Change Avatar</button>
-                <p class="text-xs text-gray-500 mt-2">JPG, GIF or PNG. Max size of 2MB.</p>
+                <button class="px-4 py-2 bg-[#27272a] text-sm rounded-lg" disabled data-i18n="uc.change_avatar">Change Avatar</button>
+                <p class="text-xs text-gray-500 mt-2" data-i18n="uc.avatar_hint">JPG, GIF or PNG.</p>
               </div>
             </div>
-            
             <div>
-              <label class="block text-sm font-medium text-gray-400 mb-1">Display Name</label>
+              <label class="block text-sm font-medium text-gray-400 mb-1" data-i18n="uc.display_name">Display Name</label>
               <div class="flex gap-2">
                 <input type="text" id="input-nickname" class="form-input">
-                <button id="save-nickname-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">Save</button>
+                <button id="save-nickname-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors" data-i18n="common.save">Save</button>
               </div>
             </div>
-            
             <div>
-              <label class="block text-sm font-medium text-gray-400 mb-1">Nexus ID (Immutable)</label>
+              <label class="block text-sm font-medium text-gray-400 mb-1" data-i18n="uc.nexus_id">Nexus ID (Immutable)</label>
               <input type="text" id="input-nexus-id" disabled class="w-full bg-[#121212] border border-[#27272a] rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed font-mono">
             </div>
           </div>
         </div>
-
-        <!-- Site TXT Verification -->
-        <div class="glass-panel p-6">
-          <h3 class="text-lg font-semibold text-white mb-2">Site Verification (for Twikoo)</h3>
-          <p class="text-sm text-gray-500 mb-4">Verify your blog domain via TXT record to display the official badge when commenting.</p>
-          
-          <div class="space-y-3" id="domains-container">
-            <div class="text-sm text-gray-500">Loading domains...</div>
-          </div>
-          
-          <div class="flex gap-2 mt-4">
-            <input type="text" id="domain-input" placeholder="Add new domain (e.g. myblog.com)..." class="form-input" disabled title="V1.1 Feature">
-            <button class="px-4 py-2 bg-[#27272a] text-gray-400 text-sm rounded-lg cursor-not-allowed" disabled>Verify TXT</button>
-          </div>
-        </div>
       </section>
 
-      <!-- ========================================== -->
-      <!-- TAB 2: Security & Auth                     -->
-      <!-- ========================================== -->
+      <!-- TAB 2: Security -->
       <section id="tab-security" class="tab-content space-y-6">
         <div class="glass-panel p-6">
-          <h2 class="text-xl font-semibold text-white mb-6">Security & Authentication</h2>
-          
+          <h2 class="text-xl font-semibold text-white mb-6" data-i18n="uc.security_title">Security & Authentication</h2>
           <div class="space-y-4">
-            <!-- Password -->
             <div class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl">
               <div>
-                <p class="text-sm font-medium text-white">Password</p>
-                <p class="text-xs text-gray-500">Last changed recently</p>
+                <p class="text-sm font-medium text-white" data-i18n="uc.password">Password</p>
+                <p class="text-xs text-gray-500" data-i18n="uc.password_hint">Last changed recently</p>
               </div>
-              <button id="change-pwd-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors">Change</button>
+              <button id="change-pwd-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors" data-i18n="uc.change">Change</button>
             </div>
-
-            <!-- Passkey -->
             <div class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl opacity-60">
               <div class="flex items-center gap-3">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 2a10 10 0 00-6.88 17.23M18.88 19.23A10 10 0 0012 2m-1.56 6.06a1 1 0 011.12 0m-1.88 1.88a2 2 0 013.64 0m-5.76 3.88a8 8 0 0111.24 0m-15 4a12 12 0 0120.8 0M15 14a3 3 0 00-6 0m3 3v4"/></svg>
                 <div>
-                  <p class="text-sm font-medium text-white">Passkey (Hardware Key)</p>
+                  <p class="text-sm font-medium text-white" data-i18n="uc.passkey">Passkey</p>
                   <p class="text-xs text-emerald-400" id="passkey-status">Loading...</p>
                 </div>
               </div>
-              <button class="px-3 py-1.5 bg-[#27272a] text-gray-400 text-xs rounded-lg cursor-not-allowed" disabled title="V1.1 Feature">Manage</button>
+              <button class="px-3 py-1.5 bg-[#27272a] text-xs rounded-lg" disabled data-i18n="uc.manage">Manage</button>
             </div>
-
-            <!-- Third-party Accounts -->
             <div class="p-4 bg-[#121212] border border-[#27272a] rounded-xl mt-6">
-              <p class="text-sm font-medium text-white mb-3">Third-party Accounts</p>
-              <div id="oauth-bindings-container" class="space-y-2">
-                <div class="text-sm text-gray-500">Loading bindings...</div>
-              </div>
+              <p class="text-sm font-medium text-white mb-3" data-i18n="uc.third_party">Third-party Accounts</p>
+              <div id="oauth-bindings-container" class="space-y-2"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ========================================== -->
-      <!-- TAB 3: Data & Privacy                      -->
-      <!-- ========================================== -->
+      <!-- TAB 3: Privacy -->
       <section id="tab-privacy" class="tab-content space-y-6">
         <div class="glass-panel p-6 mb-12">
-          <h2 class="text-xl font-semibold text-white mb-6">Data & Privacy</h2>
-          
+          <h2 class="text-xl font-semibold text-white mb-6" data-i18n="uc.privacy_title">Data & Privacy</h2>
           <div class="space-y-4">
-            <!-- Data Export -->
             <div id="export-section" class="flex items-center justify-between p-4 bg-[#121212] border border-[#27272a] rounded-xl hidden">
               <div>
-                <p class="text-sm font-medium text-white">Export Personal Data</p>
-                <p class="text-xs text-gray-500">Download all your profile info, auth records, and activity logs as JSON.</p>
+                <p class="text-sm font-medium text-white" data-i18n="uc.export_title">Export Personal Data</p>
+                <p class="text-xs text-gray-500" data-i18n="uc.export_desc">Download all your profile info.</p>
               </div>
-              <button id="export-data-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors">Request Export</button>
+              <button id="export-data-btn" class="px-3 py-1.5 bg-[#27272a] hover:bg-[#3f3f46] text-xs rounded-lg transition-colors" data-i18n="uc.export_btn">Request Export</button>
             </div>
-
-            <!-- Danger Zone: Delete Account -->
             <div class="flex items-center justify-between p-4 bg-red-500/5 border border-red-500/20 rounded-xl mt-8">
               <div>
-                <p class="text-sm font-medium text-red-400">Delete Account</p>
-                <p class="text-xs text-red-500/60">Once deleted, all your data and access will be permanently revoked.</p>
+                <p class="text-sm font-medium text-red-400" data-i18n="uc.delete_title">Delete Account</p>
+                <p class="text-xs text-red-500/60" data-i18n="uc.delete_desc">Once deleted, all your data will be lost.</p>
               </div>
-              <button id="delete-account-btn" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs rounded-lg transition-colors">Delete</button>
+              <button id="delete-account-btn" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs rounded-lg transition-colors" data-i18n="uc.delete_btn">Delete</button>
             </div>
           </div>
         </div>
       </section>
-
     </div>
   </main>
 
-  <!-- Delete Account Modal -->
+  <!-- Modals -->
   <div id="deleteModal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
     <div class="bg-[#18181b] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
-      <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      </div>
-      <h3 class="text-lg font-bold text-white mb-2">Are you absolutely sure?</h3>
-      <p class="text-sm text-gray-400 mb-6">This action cannot be undone. This will permanently delete your Nexus account and remove all access tokens for connected apps.</p>
-      
-      <label class="block text-xs font-medium text-gray-400 mb-2">Type your Nexus ID (<span id="modal-nexus-id" class="text-gray-300 font-mono"></span>) to confirm</label>
+      <h3 class="text-lg font-bold text-white mb-2" data-i18n="uc.delete_modal_title">Are you sure?</h3>
+      <p class="text-sm text-gray-400 mb-6" data-i18n="uc.delete_modal_desc">This action cannot be undone.</p>
+      <label class="block text-xs font-medium text-gray-400 mb-2"><span data-i18n="uc.delete_modal_hint">Type your ID</span> (<span id="modal-nexus-id" class="text-gray-300 font-mono"></span>)</label>
       <input type="text" id="delete-confirm-input" class="form-input mb-6">
-      
       <div class="flex gap-3 justify-end">
-        <button id="cancel-delete-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
-        <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors opacity-50 cursor-not-allowed">Delete Account</button>
+        <button id="cancel-delete-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white" data-i18n="common.cancel">Cancel</button>
+        <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg opacity-50 cursor-not-allowed" data-i18n="uc.delete_modal_confirm">Delete Account</button>
       </div>
     </div>
   </div>
 
-  <!-- Change Password Modal -->
   <div id="changePwdModal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
     <div class="bg-[#18181b] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
-      <h3 class="text-lg font-bold text-white mb-4">Change Password</h3>
-      
+      <h3 class="text-lg font-bold text-white mb-4" data-i18n="uc.change">Change Password</h3>
       <label class="block text-xs font-medium text-gray-400 mb-2">Current Password</label>
       <input type="password" id="old-pwd-input" class="form-input mb-4">
-      
-      <label class="block text-xs font-medium text-gray-400 mb-2">New Password (Min 8 chars)</label>
+      <label class="block text-xs font-medium text-gray-400 mb-2">New Password</label>
       <input type="password" id="new-pwd-input" class="form-input mb-6">
-      
       <div class="flex gap-3 justify-end">
-        <button id="cancel-pwd-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">Cancel</button>
-        <button id="confirm-pwd-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Change Password</button>
+        <button id="cancel-pwd-btn" class="px-4 py-2 text-sm text-gray-300 hover:text-white" data-i18n="common.cancel">Cancel</button>
+        <button id="confirm-pwd-btn" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg" data-i18n="uc.change">Change</button>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <div class="fixed bottom-0 right-0 p-4 text-xs text-gray-600 pointer-events-none">
-    <span class="pointer-events-auto">
-      <a id="powered-by-text" href="https://github.com/CrCLARE/Nexus" target="_blank" rel="noopener noreferrer" class="hover:text-gray-400">Powered by Nexus</a>
-    </span>
-  </div>
-
-  <!-- UC Page Logic -->
   <script type="module">
     import { initI18n } from '/js/i18n.js';
-    import { initApp } from '/js/app.js';
+    import { initApp, checkAuth } from '/js/app.js';
 
     async function setupUC() {
+      // 🚨 SECURITY: Verify User Login BEFORE rendering sensitive UI
+      const user = await checkAuth(false); // false = doesn't require admin
+      document.getElementById('auth-overlay').style.display = 'none';
+
       await initI18n();
       await initApp();
 
-      // Setup Navigation Tabs
       const navItems = document.querySelectorAll('.nav-item');
       const tabs = document.querySelectorAll('.tab-content');
       navItems.forEach(item => {
@@ -289,208 +218,83 @@
         });
       });
 
-      // 1. Fetch User Data
-      let user = null;
-      try {
-        const res = await fetch('/api/user/me');
-        if (res.status === 401) {
-          window.location.href = '/login.html';
-          return;
-        }
-        
-        user = await res.json();
-        
-        // Populate UI
-        document.getElementById('user-nickname').textContent = user.nickname;
-        document.getElementById('avatar-letter').textContent = user.nickname.charAt(0).toUpperCase();
-        document.getElementById('input-nickname').value = user.nickname;
-        document.getElementById('input-nexus-id').value = user.nexusId;
-        document.getElementById('modal-nexus-id').textContent = user.nexusId;
-        
-        // Role Badge
-        const badge = document.getElementById('account-badge');
-        if (user.role === 'super_admin' || user.role === 'admin') {
-          badge.textContent = 'Administrator';
-          badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-semibold border border-purple-500/20';
-        } else {
-          badge.textContent = 'Standard User';
-        }
-
-        // Passkey Status
-        const passkeyStatus = document.getElementById('passkey-status');
-        if (user.passkeysCount > 0) {
-          passkeyStatus.textContent = `${user.passkeysCount} device(s) bound`;
-          passkeyStatus.className = 'text-xs text-emerald-400';
-        } else {
-          passkeyStatus.textContent = 'No devices bound';
-          passkeyStatus.className = 'text-xs text-gray-500';
-        }
-
-        // Data Export Toggle
-        if (window.NEXUS_CONFIG.allow_uc_export) {
-          document.getElementById('export-section').classList.remove('hidden');
-        }
-
-      } catch (err) {
-        console.error('Failed to load user data', err);
+      // Fetch and populate user data
+      document.getElementById('user-nickname').textContent = user.nickname;
+      document.getElementById('avatar-letter').textContent = user.nickname.charAt(0).toUpperCase();
+      document.getElementById('input-nickname').value = user.nickname;
+      document.getElementById('input-nexus-id').value = user.nexusId;
+      document.getElementById('modal-nexus-id').textContent = user.nexusId;
+      
+      const badge = document.getElementById('account-badge');
+      if (user.role === 'super_admin' || user.role === 'admin') {
+        badge.textContent = 'Administrator';
+        badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-semibold border border-purple-500/20';
+      } else {
+        badge.textContent = 'Standard User';
       }
 
-      // 2. Save Nickname Logic
+      if (window.NEXUS_CONFIG.allow_uc_export) {
+        document.getElementById('export-section').classList.remove('hidden');
+      }
+
+      // Save Nickname
       document.getElementById('save-nickname-btn').addEventListener('click', async () => {
         const newNickname = document.getElementById('input-nickname').value.trim();
         if (!newNickname) return alert("Nickname cannot be empty.");
-        
         try {
           const res = await fetch('/api/user/update-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nickname: newNickname })
           });
-          if (res.ok) {
-            alert('Nickname updated successfully!');
-            window.location.reload();
-          } else {
-            alert('Failed to update nickname.');
-          }
+          if (res.ok) { alert('Nickname updated!'); window.location.reload(); }
         } catch (err) { alert('Network error.'); }
       });
 
-      // 3. Export Data Logic
-      const exportBtn = document.getElementById('export-data-btn');
-      if (exportBtn) {
-        exportBtn.addEventListener('click', async () => {
-          try {
-            const res = await fetch('/api/user/export');
-            if (res.ok) {
-              const blob = await res.blob();
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `nexus-export-${user.nexusId}.json`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-            } else {
-              alert('Export disabled or failed.');
-            }
-          } catch (err) { alert('Network error.'); }
-        });
-      }
-
-      // 4. Render OAuth Bindings
-      const oauthContainer = document.getElementById('oauth-bindings-container');
-      const config = window.NEXUS_CONFIG;
-      
-      if (config.enabledOAuths && config.enabledOAuths.length > 0) {
-        oauthContainer.innerHTML = '';
-        
-        const providerMeta = {
-          github: { name: 'GitHub', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>' }
-        };
-
-        config.enabledOAuths.forEach(providerKey => {
-          const meta = providerMeta[providerKey];
-          if (!meta) return;
-          
-          const isBound = user.boundOAuths.includes(providerKey);
-          
-          const row = document.createElement('div');
-          row.className = "flex items-center justify-between mt-2 pt-2 border-t border-[#27272a] first:border-0 first:mt-0 first:pt-0";
-          row.innerHTML = `
-            <div class="flex items-center gap-2 text-sm ${isBound ? 'text-gray-300' : 'text-gray-500'}">
-              ${meta.icon}
-              ${meta.name}
-            </div>
-            <button class="text-xs ${isBound ? 'text-red-400 hover:text-red-300' : 'text-blue-400 hover:text-blue-300'}" onclick="alert('Binding logic will be implemented in V1.1')">
-              ${isBound ? 'Unbind' : 'Bind'}
-            </button>
-          `;
-          oauthContainer.appendChild(row);
-        });
-      } else {
-        oauthContainer.innerHTML = '<p class="text-sm text-gray-500">No third-party logins are enabled.</p>';
-      }
-
-      // 5. Change Password Modal Logic
-      const changePwdBtn = document.getElementById('change-pwd-btn');
-      const changePwdModal = document.getElementById('changePwdModal');
-      const cancelPwdBtn = document.getElementById('cancel-pwd-btn');
-      const confirmPwdBtn = document.getElementById('confirm-pwd-btn');
-
-      changePwdBtn.addEventListener('click', () => {
-        document.getElementById('old-pwd-input').value = '';
-        document.getElementById('new-pwd-input').value = '';
-        changePwdModal.classList.remove('hidden');
+      // Delete Account
+      document.getElementById('delete-account-btn').addEventListener('click', () => {
+        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('delete-confirm-input').value = '';
+      });
+      document.getElementById('cancel-delete-btn').addEventListener('click', () => document.getElementById('deleteModal').classList.add('hidden'));
+      document.getElementById('delete-confirm-input').addEventListener('input', (e) => {
+        const btn = document.getElementById('confirm-delete-btn');
+        if (e.target.value === user.nexusId) {
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          btn.disabled = false;
+        } else {
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          btn.disabled = true;
+        }
+      });
+      document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+        if (document.getElementById('delete-confirm-input').value === user.nexusId) {
+          const res = await fetch('/api/user/delete-account', { method: 'POST' });
+          if (res.ok) { window.location.href = '/login.html'; }
+        }
       });
 
-      cancelPwdBtn.addEventListener('click', () => changePwdModal.classList.add('hidden'));
-
-      confirmPwdBtn.addEventListener('click', async () => {
+      // Change Password
+      document.getElementById('change-pwd-btn').addEventListener('click', () => {
+        document.getElementById('changePwdModal').classList.remove('hidden');
+      });
+      document.getElementById('cancel-pwd-btn').addEventListener('click', () => document.getElementById('changePwdModal').classList.add('hidden'));
+      document.getElementById('confirm-pwd-btn').addEventListener('click', async () => {
         const oldPassword = document.getElementById('old-pwd-input').value;
         const newPassword = document.getElementById('new-pwd-input').value;
-
-        if (!oldPassword || !newPassword || newPassword.length < 8) {
-          return alert("Please enter a valid old and new password (min 8 chars).");
-        }
-
-        try {
-          const res = await fetch('/api/user/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ oldPassword, newPassword })
-          });
-          
-          if (res.ok) {
-            alert('Password changed successfully!');
-            changePwdModal.classList.add('hidden');
-          } else {
-            const data = await res.json();
-            alert(data.error?.message || 'Failed to change password.');
-          }
-        } catch (err) { alert('Network error.'); }
+        if (!oldPassword || !newPassword) return;
+        const res = await fetch('/api/user/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        if (res.ok) { alert('Password changed!'); document.getElementById('changePwdModal').classList.add('hidden'); }
       });
 
-      // 6. Delete Account Logic
-      const deleteBtn = document.getElementById('delete-account-btn');
-      const deleteModal = document.getElementById('deleteModal');
-      const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-      const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-      const deleteConfirmInput = document.getElementById('delete-confirm-input');
-
-      deleteBtn.addEventListener('click', () => {
-        deleteModal.classList.remove('hidden');
-        deleteConfirmInput.value = '';
-        confirmDeleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      });
-
-      cancelDeleteBtn.addEventListener('click', () => deleteModal.classList.add('hidden'));
-
-      deleteConfirmInput.addEventListener('input', (e) => {
-        if (e.target.value === user.nexusId) {
-          confirmDeleteBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        } else {
-          confirmDeleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-      });
-
-      confirmDeleteBtn.addEventListener('click', async () => {
-        if (deleteConfirmInput.value === user.nexusId) {
-          try {
-            const res = await fetch('/api/user/delete-account', { method: 'POST' });
-            if (res.ok) {
-              alert('Account permanently deleted.');
-              window.location.href = '/login.html';
-            } else {
-              alert('Failed to delete account.');
-            }
-          } catch (err) { alert('Network error.'); }
-        }
-      });
-
-      // 7. Logout
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-        document.cookie = "nexus_session=; Max-Age=0; path=/;";
-        window.location.href = '/login.html';
+      // Logout
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+        window.location.replace('/login.html');
       });
     }
 

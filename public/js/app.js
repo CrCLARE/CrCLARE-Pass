@@ -1,7 +1,8 @@
 // ============================================================
 // Nexus - Dynamic Frontend Application Logic
 // SECURITY: Uses textContent strictly for DOM injection to prevent XSS.
-// Handles dynamic configuration, OAuth rendering, login, registration, and email verification flows.
+// Handles dynamic configuration, OAuth rendering, login, registration, 
+// email verification, and route guards.
 // ============================================================
 
 // Supported OAuth providers mapping. 
@@ -75,6 +76,38 @@ export async function initApp() {
 
   } catch (e) {
     console.error('[App] Failed to load dynamic config:', e);
+  }
+}
+
+/**
+ * SECURITY: Frontend Route Guard.
+ * Verifies if the user is logged in (and is admin if required).
+ * If not, immediately redirects and stops page execution.
+ */
+export async function checkAuth(requireAdmin = false) {
+  try {
+    const res = await fetch('/api/user/me');
+    if (res.status === 401) {
+      window.location.replace('/login.html');
+      throw new Error('Unauthorized');
+    }
+
+    const user = await res.json();
+
+    // Check Admin privilege
+    if (requireAdmin && user.role !== 'admin' && user.role !== 'super_admin') {
+      window.location.replace('/uc.html');
+      throw new Error('Forbidden');
+    }
+
+    return user;
+  } catch (e) {
+    console.error('[Auth Guard Error]', e);
+    // If fetch fails completely, kick to login
+    if (window.location.pathname !== '/login.html') {
+       window.location.replace('/login.html');
+    }
+    throw e;
   }
 }
 
@@ -328,16 +361,9 @@ export function setupRegisterFlow() {
       const data = await res.json();
 
       if (res.ok) {
-        // ==========================================
-        // NEW LOGIC: Handle Email Verification Flow
-        // ==========================================
         if (data.require_verify) {
-          // Backend has email verification enabled. 
-          // Do not issue session cookie yet. Redirect to verify page.
           window.location.href = `/verify-email.html?email=${encodeURIComponent(email)}`;
         } else {
-          // Email verification disabled. Backend issued HttpOnly cookie.
-          // Show success and enter UC.
           alert("Congratulations! You have successfully registered.");
           window.location.href = '/uc.html';
         }
@@ -379,18 +405,14 @@ export function setupRegisterFlow() {
 // Email Verification Flow
 // ============================================================
 
-/**
- * Sets up the email verification page flow, including resend cooldown.
- */
 export function setupVerifyEmailFlow() {
   const verifyForm = document.getElementById('verifyForm');
-  if (!verifyForm) return; // Exit if not on the verify page
+  if (!verifyForm) return; 
 
   const displayEmail = document.getElementById('displayEmail');
   const codeInput = document.getElementById('code');
   const resendBtn = document.getElementById('resendBtn');
 
-  // 1. Extract email from URL query parameters
   const urlParams = new URLSearchParams(window.location.search);
   const email = urlParams.get('email');
   
@@ -398,7 +420,6 @@ export function setupVerifyEmailFlow() {
     displayEmail.textContent = email;
   }
 
-  // 2. Resend Cooldown Logic (60 seconds)
   let cooldown = 0;
   let cooldownInterval = null;
 
@@ -420,7 +441,6 @@ export function setupVerifyEmailFlow() {
     }, 1000);
   }
 
-  // 3. Handle Resend Click
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
       if (cooldown > 0 || !email) return;
@@ -446,7 +466,6 @@ export function setupVerifyEmailFlow() {
     });
   }
 
-  // 4. Handle Form Submission (Verification)
   verifyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const code = codeInput.value.trim();
@@ -465,7 +484,6 @@ export function setupVerifyEmailFlow() {
       const data = await res.json();
 
       if (res.ok) {
-        // Verification successful, backend should issue session cookie here
         alert("Email verified successfully! Welcome to Nexus.");
         window.location.href = '/uc.html';
       } else {

@@ -27,7 +27,47 @@ export async function handleAdminAPI(request, env) {
   if (!auth.authorized) return auth.response;
 
   // ==========================================
+  // GET /api/admin/stats
+  // Fetch real-time system statistics for the dashboard
+  // ==========================================
+  if (path === '/api/admin/stats' && request.method === 'GET') {
+    try {
+      const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first();
+      const oauthCount = await env.DB.prepare("SELECT COUNT(*) as count FROM oauth_accounts").first();
+      // NOTE: 'apps' table is not yet in V1.0 schema, returning 0 as placeholder
+      const appCount = { count: 0 }; 
+
+      return json({
+        users: userCount.count || 0,
+        oauths: oauthCount.count || 0,
+        apps: appCount.count
+      });
+    } catch (e) {
+      console.error('[Admin API] Stats Error:', e);
+      return error('ERR_DB', 'Failed to fetch stats', 500);
+    }
+  }
+
+  // ==========================================
+  // GET /api/admin/users
+  // Fetch the latest 50 users for management
+  // ==========================================
+  if (path === '/api/admin/users' && request.method === 'GET') {
+    try {
+      const users = await env.DB.prepare(
+        "SELECT id, email, role, status, created_at FROM users ORDER BY created_at DESC LIMIT 50"
+      ).all();
+      
+      return json(users.results || []);
+    } catch (e) {
+      console.error('[Admin API] Users Error:', e);
+      return json({ error: 'Failed to fetch users' }, 500);
+    }
+  }
+
+  // ==========================================
   // GET /api/admin/settings
+  // Fetch all site configurations
   // ==========================================
   if (path === '/api/admin/settings' && request.method === 'GET') {
     try {
@@ -46,12 +86,14 @@ export async function handleAdminAPI(request, env) {
 
       return json(settings);
     } catch (e) {
+      console.error('[Admin API] Settings Fetch Error:', e);
       return error('ERR_DB', 'Failed to fetch settings', 500);
     }
   }
 
   // ==========================================
   // POST /api/admin/settings
+  // Update system settings
   // ==========================================
   if (path === '/api/admin/settings' && request.method === 'POST') {
     try {
@@ -66,7 +108,7 @@ export async function handleAdminAPI(request, env) {
         // SECURITY: Skip masked secrets if they haven't been changed
         if (key === 'github_client_secret' && value === '••••••••••••••••') continue;
 
-        // SECURITY: Parameterized UPSERT
+        // SECURITY: Parameterized UPSERT to prevent SQL injection
         statements.push(
           env.DB.prepare(`
             INSERT INTO system_settings (key, value, updated_at) 
@@ -82,13 +124,12 @@ export async function handleAdminAPI(request, env) {
 
       return json({ success: true, message: 'Settings updated' });
     } catch (e) {
-      console.error('[Admin API Error]', e);
+      console.error('[Admin API] Settings Update Error:', e);
       return error('ERR_DB', 'Failed to update settings', 500);
     }
   }
 
-  // TODO: Add /api/admin/users for user management
-  // TODO: Add /api/admin/logs for audit logs
+  // TODO: Add endpoints for V1.1 (App management, Ban/Unban users, Audit logs)
 
   return error('ERR_NOT_FOUND', 'Admin route not found', 404);
 }
